@@ -21,7 +21,7 @@ export default function NewTaskScreen() {
   const [isDraftLoading, setIsDraftLoading] = useState(true);
   const [pendingDraft, setPendingDraft] = useState<TaskFormValues | null>(null);
   const [initialValues, setInitialValues] = useState<TaskFormValues | undefined>();
-  // Смена key пересоздаёт форму с новыми начальными значениями
+
   const [formKey, setFormKey] = useState(0);
 
   useEffect(() => {
@@ -49,7 +49,6 @@ export default function NewTaskScreen() {
   };
 
   const handleChange = (values: TaskFormValues) => {
-    // Пользователь начал вводить новые данные — старый черновик больше не предлагаем
     setPendingDraft(null);
     saveDraft(values);
   };

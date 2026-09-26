@@ -25,7 +25,6 @@ export default function TaskCard({
       <Pressable
         style={styles.checkbox}
         onPress={() => onToggleComplete(task.id)}
-        hitSlop={8}
       >
         {task.isCompleted && <Text style={styles.checkboxMark}>✓</Text>}
       </Pressable>

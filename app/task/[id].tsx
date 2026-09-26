@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import TaskNotFound from '../../src/components/TaskNotFound';
 import { useTasks } from '../../src/context/TasksContext';
 import { useTheme } from '../../src/context/ThemeContext';
 import { ThemeColors } from '../../src/theme/colors';
@@ -16,7 +15,17 @@ export default function TaskDetailsScreen() {
   const task = id ? getTaskById(id) : undefined;
 
   if (!task) {
-    return <TaskNotFound />;
+    return (
+      <View style={styles.notFound}>
+        <Text style={styles.value}>Задача не найдена</Text>
+        <Pressable
+          style={styles.primaryButton}
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
+        >
+          <Text style={styles.primaryButtonText}>К списку задач</Text>
+        </Pressable>
+      </View>
+    );
   }
 
   return (
@@ -66,6 +75,12 @@ const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     content: {
       padding: 16,
+    },
+    notFound: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 24,
     },
     card: {
       backgroundColor: colors.card,

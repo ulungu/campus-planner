@@ -1,18 +1,23 @@
 import React from 'react';
-import { ScrollView } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import TaskForm from '../../../src/components/TaskForm';
-import TaskNotFound from '../../../src/components/TaskNotFound';
 import { useTasks } from '../../../src/context/TasksContext';
+import { useTheme } from '../../../src/context/ThemeContext';
 import { TaskFormValues } from '../../../src/types/task';
 
 export default function EditTaskScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { getTaskById, updateTask } = useTasks();
+  const { colors } = useTheme();
   const task = id ? getTaskById(id) : undefined;
 
   if (!task) {
-    return <TaskNotFound />;
+    return (
+      <View style={styles.notFound}>
+        <Text style={{ color: colors.text }}>Задача не найдена</Text>
+      </View>
+    );
   }
 
   const handleSubmit = (values: TaskFormValues) => {
@@ -35,3 +40,12 @@ export default function EditTaskScreen() {
     </ScrollView>
   );
 }
+
+const styles = StyleSheet.create({
+  notFound: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+});

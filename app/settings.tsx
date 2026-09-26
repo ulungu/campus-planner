@@ -42,9 +42,6 @@ export default function SettingsScreen() {
           );
         })}
       </View>
-      <Text style={[styles.hint, { color: colors.textSecondary }]}>
-        Выбранная тема сохраняется и применяется при следующем запуске.
-      </Text>
     </View>
   );
 }

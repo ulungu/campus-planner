@@ -8,7 +8,6 @@ import { TasksProvider } from '../src/context/TasksContext';
 function RootStack() {
   const { theme, colors, isLoading } = useTheme();
 
-  // Пока тема читается из AsyncStorage, показываем нейтральный экран загрузки
   if (isLoading) {
     return (
       <View style={styles.loading}>

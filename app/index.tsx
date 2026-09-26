@@ -41,7 +41,7 @@ export default function TaskListScreen() {
       <Stack.Screen
         options={{
           headerRight: () => (
-            <Pressable onPress={() => router.push('/settings')} hitSlop={8}>
+            <Pressable onPress={() => router.push('/settings')}>
               <Text style={styles.headerLink}>Настройки</Text>
             </Pressable>
           ),
