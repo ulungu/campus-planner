@@ -8,6 +8,8 @@ export interface Task {
   isCompleted: boolean;
 }
 
+export type TaskFormValues = Omit<Task, 'id' | 'isCompleted'>;
+
 export const PRIORITY_LABELS: Record<TaskPriority, string> = {
   low: 'Низкий',
   medium: 'Средний',

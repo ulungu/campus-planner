@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -6,20 +6,48 @@ import {
   Pressable,
   StyleSheet,
 } from 'react-native';
-import { Task, TaskPriority, PRIORITY_LABELS } from '../types/task';
+import { TaskFormValues, TaskPriority, PRIORITY_LABELS } from '../types/task';
+import { useTheme } from '../context/ThemeContext';
+import { ThemeColors } from '../theme/colors';
 
 interface TaskFormProps {
-  onSubmit: (data: Omit<Task, 'id' | 'isCompleted'>) => void;
+  initialValues?: TaskFormValues;
+  submitLabel?: string;
+  onSubmit: (data: TaskFormValues) => void;
   onCancel: () => void;
+  onChange?: (data: TaskFormValues) => void;
 }
 
 const PRIORITIES: TaskPriority[] = ['low', 'medium', 'high'];
 
-export default function TaskForm({ onSubmit, onCancel }: TaskFormProps) {
-  const [title, setTitle] = useState('');
-  const [subject, setSubject] = useState('');
-  const [priority, setPriority] = useState<TaskPriority>('medium');
+const EMPTY_VALUES: TaskFormValues = {
+  title: '',
+  subject: '',
+  priority: 'medium',
+};
+
+export default function TaskForm({
+  initialValues = EMPTY_VALUES,
+  submitLabel = 'Добавить',
+  onSubmit,
+  onCancel,
+  onChange,
+}: TaskFormProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
+  const [title, setTitle] = useState(initialValues.title);
+  const [subject, setSubject] = useState(initialValues.subject);
+  const [priority, setPriority] = useState<TaskPriority>(initialValues.priority);
   const [error, setError] = useState<string | null>(null);
+
+  const update = (patch: Partial<TaskFormValues>) => {
+    const next = { title, subject, priority, ...patch };
+    if (patch.title !== undefined) setTitle(patch.title);
+    if (patch.subject !== undefined) setSubject(patch.subject);
+    if (patch.priority !== undefined) setPriority(patch.priority);
+    onChange?.(next);
+  };
 
   const handleSubmit = () => {
     const trimmedTitle = title.trim();
@@ -30,16 +58,12 @@ export default function TaskForm({ onSubmit, onCancel }: TaskFormProps) {
       return;
     }
 
+    setError(null);
     onSubmit({
       title: trimmedTitle,
       subject: trimmedSubject,
       priority,
     });
-
-    setTitle('');
-    setSubject('');
-    setPriority('medium');
-    setError(null);
   };
 
   return (
@@ -48,18 +72,18 @@ export default function TaskForm({ onSubmit, onCancel }: TaskFormProps) {
       <TextInput
         style={styles.input}
         value={title}
-        onChangeText={setTitle}
+        onChangeText={(text) => update({ title: text })}
         placeholder="Например: Сделать домашку по матанализу"
-        placeholderTextColor="#999"
+        placeholderTextColor={colors.placeholder}
       />
 
       <Text style={styles.label}>Предмет</Text>
       <TextInput
         style={styles.input}
         value={subject}
-        onChangeText={setSubject}
+        onChangeText={(text) => update({ subject: text })}
         placeholder="Например: Математический анализ"
-        placeholderTextColor="#999"
+        placeholderTextColor={colors.placeholder}
       />
 
       <Text style={styles.label}>Приоритет</Text>
@@ -71,7 +95,7 @@ export default function TaskForm({ onSubmit, onCancel }: TaskFormProps) {
               styles.priorityOption,
               priority === p && styles.priorityOptionActive,
             ]}
-            onPress={() => setPriority(p)}
+            onPress={() => update({ priority: p })}
           >
             <Text
               style={[
@@ -92,93 +116,94 @@ export default function TaskForm({ onSubmit, onCancel }: TaskFormProps) {
           <Text style={styles.cancelButtonText}>Отмена</Text>
         </Pressable>
         <Pressable style={styles.submitButton} onPress={handleSubmit}>
-          <Text style={styles.submitButtonText}>Добавить</Text>
+          <Text style={styles.submitButtonText}>{submitLabel}</Text>
         </Pressable>
       </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginHorizontal: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
-  },
-  label: {
-    fontSize: 13,
-    color: '#555',
-    marginBottom: 4,
-    marginTop: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    fontSize: 15,
-    color: '#222',
-  },
-  priorityRow: {
-    flexDirection: 'row',
-    marginTop: 6,
-  },
-  priorityOption: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    marginRight: 8,
-  },
-  priorityOptionActive: {
-    backgroundColor: '#2196F3',
-    borderColor: '#2196F3',
-  },
-  priorityOptionText: {
-    fontSize: 13,
-    color: '#444',
-  },
-  priorityOptionTextActive: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  errorText: {
-    color: '#F44336',
-    fontSize: 13,
-    marginTop: 10,
-  },
-  buttonsRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginTop: 16,
-  },
-  cancelButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    marginRight: 8,
-  },
-  cancelButtonText: {
-    color: '#666',
-    fontSize: 14,
-  },
-  submitButton: {
-    backgroundColor: '#2196F3',
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-  },
-  submitButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      padding: 16,
+      marginHorizontal: 16,
+      marginVertical: 12,
+      shadowColor: '#000',
+      shadowOpacity: 0.08,
+      shadowRadius: 4,
+      shadowOffset: { width: 0, height: 2 },
+      elevation: 3,
+    },
+    label: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      marginBottom: 4,
+      marginTop: 8,
+    },
+    input: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      fontSize: 15,
+      color: colors.text,
+    },
+    priorityRow: {
+      flexDirection: 'row',
+      marginTop: 6,
+    },
+    priorityOption: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 8,
+      paddingVertical: 6,
+      paddingHorizontal: 12,
+      marginRight: 8,
+    },
+    priorityOptionActive: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    priorityOptionText: {
+      fontSize: 13,
+      color: colors.chipText,
+    },
+    priorityOptionTextActive: {
+      color: colors.onPrimary,
+      fontWeight: '600',
+    },
+    errorText: {
+      color: colors.danger,
+      fontSize: 13,
+      marginTop: 10,
+    },
+    buttonsRow: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      marginTop: 16,
+    },
+    cancelButton: {
+      paddingVertical: 10,
+      paddingHorizontal: 16,
+      marginRight: 8,
+    },
+    cancelButtonText: {
+      color: colors.textSecondary,
+      fontSize: 14,
+    },
+    submitButton: {
+      backgroundColor: colors.primary,
+      borderRadius: 8,
+      paddingVertical: 10,
+      paddingHorizontal: 20,
+    },
+    submitButtonText: {
+      color: colors.onPrimary,
+      fontSize: 14,
+      fontWeight: '600',
+    },
+  });
