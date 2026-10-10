@@ -1,18 +1,33 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { TaskFormValues } from '../types/task';
+import { TaskFormValues, TaskPriority } from '../types/task';
 
 export const DRAFT_STORAGE_KEY = '@campus-planner/task-draft';
 
+const PRIORITIES: readonly TaskPriority[] = ['low', 'medium', 'high'];
+
+// Type guard: проверяем, что из хранилища пришёл объект нужной формы
+function isTaskFormValues(value: unknown): value is TaskFormValues {
+  if (typeof value !== 'object' || value === null) return false;
+  const draft = value as Record<string, unknown>;
+  return (
+    typeof draft.title === 'string' &&
+    typeof draft.subject === 'string' &&
+    PRIORITIES.includes(draft.priority as TaskPriority) &&
+    (draft.dueDate === undefined || typeof draft.dueDate === 'string')
+  );
+}
+
 export function isDraftEmpty(draft: TaskFormValues): boolean {
-  return !draft.title.trim() && !draft.subject.trim();
+  return !draft.title.trim() && !draft.subject.trim() && !draft.dueDate?.trim();
 }
 
 export async function loadDraft(): Promise<TaskFormValues | null> {
   try {
     const raw = await AsyncStorage.getItem(DRAFT_STORAGE_KEY);
     if (!raw) return null;
-    const draft = JSON.parse(raw) as TaskFormValues;
-    return isDraftEmpty(draft) ? null : draft;
+    const parsed: unknown = JSON.parse(raw);
+    if (!isTaskFormValues(parsed)) return null;
+    return isDraftEmpty(parsed) ? null : parsed;
   } catch (e) {
     console.warn('Не удалось загрузить черновик', e);
     return null;

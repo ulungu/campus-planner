@@ -1,51 +1,49 @@
 import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import TaskForm from '../../../src/components/TaskForm';
-import { useTasks } from '../../../src/context/TasksContext';
-import { useTheme } from '../../../src/context/ThemeContext';
+import Screen from '../../../src/components/ui/Screen';
+import EmptyState from '../../../src/components/ui/EmptyState';
+import TaskForm from '../../../src/components/task/TaskForm';
+import { useTasks } from '../../../src/hooks/useTasks';
 import { TaskFormValues } from '../../../src/types/task';
+import { TaskRouteParams } from '../../../src/types/navigation';
+import { goBackOrHome } from '../../../src/navigation/actions';
 
 export default function EditTaskScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id } = useLocalSearchParams<TaskRouteParams>();
   const { getTaskById, updateTask } = useTasks();
-  const { colors } = useTheme();
   const task = id ? getTaskById(id) : undefined;
 
   if (!task) {
     return (
-      <View style={styles.notFound}>
-        <Text style={{ color: colors.text }}>Задача не найдена</Text>
-      </View>
+      <Screen>
+        <EmptyState
+          title="Задача не найдена"
+          actionLabel="К списку задач"
+          onAction={goBackOrHome}
+        />
+      </Screen>
     );
   }
 
   const handleSubmit = (values: TaskFormValues) => {
-    updateTask(task.id, values);
+    // dueDate передаём явно: если поле очистили, срок у задачи удалится
+    updateTask(task.id, { ...values, dueDate: values.dueDate });
     router.back();
   };
 
   return (
-    <ScrollView keyboardShouldPersistTaps="handled">
+    <Screen scroll>
       <TaskForm
         initialValues={{
           title: task.title,
           subject: task.subject,
           priority: task.priority,
+          dueDate: task.dueDate,
         }}
         submitLabel="Сохранить"
         onSubmit={handleSubmit}
         onCancel={() => router.back()}
       />
-    </ScrollView>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  notFound: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-  },
-});

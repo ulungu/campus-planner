@@ -1,149 +1,51 @@
-import React, { useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import React from 'react';
+import { ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
-import TaskForm from '../../src/components/TaskForm';
-import { useTasks } from '../../src/context/TasksContext';
+import Screen from '../../src/components/ui/Screen';
+import TaskForm from '../../src/components/task/TaskForm';
+import DraftBanner from '../../src/components/task/DraftBanner';
+import { useTasks } from '../../src/hooks/useTasks';
+import { useTaskDraft } from '../../src/hooks/useTaskDraft';
 import { useTheme } from '../../src/context/ThemeContext';
 import { TaskFormValues } from '../../src/types/task';
-import { clearDraft, loadDraft, saveDraft } from '../../src/storage/draftStorage';
 
 export default function NewTaskScreen() {
-  const { addTask } = useTasks();
+  const { createTask } = useTasks();
   const { colors } = useTheme();
-
-  const [isDraftLoading, setIsDraftLoading] = useState(true);
-  const [pendingDraft, setPendingDraft] = useState<TaskFormValues | null>(null);
-  const [initialValues, setInitialValues] = useState<TaskFormValues | undefined>();
-
-  const [formKey, setFormKey] = useState(0);
-
-  useEffect(() => {
-    let isMounted = true;
-    loadDraft().then((draft) => {
-      if (!isMounted) return;
-      setPendingDraft(draft);
-      setIsDraftLoading(false);
-    });
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  const restoreDraft = () => {
-    if (!pendingDraft) return;
-    setInitialValues(pendingDraft);
-    setFormKey((key) => key + 1);
-    setPendingDraft(null);
-  };
-
-  const discardDraft = () => {
-    clearDraft();
-    setPendingDraft(null);
-  };
-
-  const handleChange = (values: TaskFormValues) => {
-    setPendingDraft(null);
-    saveDraft(values);
-  };
+  const draft = useTaskDraft();
 
   const handleSubmit = async (values: TaskFormValues) => {
-    addTask(values);
-    await clearDraft();
+    createTask(values);
+    await draft.clearDraft();
     router.back();
   };
 
-  if (isDraftLoading) {
+  if (draft.isLoading) {
     return (
-      <View style={styles.loading}>
+      <Screen centered>
         <ActivityIndicator color={colors.primary} />
-      </View>
+      </Screen>
     );
   }
 
   return (
-    <ScrollView keyboardShouldPersistTaps="handled">
-      {pendingDraft && (
-        <View style={[styles.banner, { backgroundColor: colors.card, borderColor: colors.primary }]}>
-          <Text style={[styles.bannerTitle, { color: colors.text }]}>
-            Найден несохранённый черновик
-          </Text>
-          <Text style={[styles.bannerText, { color: colors.textSecondary }]} numberOfLines={2}>
-            {pendingDraft.title || 'Без названия'}
-            {pendingDraft.subject ? ` · ${pendingDraft.subject}` : ''}
-          </Text>
-          <View style={styles.bannerButtons}>
-            <Pressable style={styles.bannerSecondary} onPress={discardDraft}>
-              <Text style={{ color: colors.textSecondary }}>Начать заново</Text>
-            </Pressable>
-            <Pressable
-              style={[styles.bannerPrimary, { backgroundColor: colors.primary }]}
-              onPress={restoreDraft}
-            >
-              <Text style={[styles.bannerPrimaryText, { color: colors.onPrimary }]}>
-                Восстановить
-              </Text>
-            </Pressable>
-          </View>
-        </View>
-      )}
+    <Screen scroll>
+      {draft.pendingDraft ? (
+        <DraftBanner
+          draft={draft.pendingDraft}
+          onRestore={draft.restoreDraft}
+          onDiscard={draft.discardDraft}
+        />
+      ) : null}
 
       <TaskForm
-        key={formKey}
-        initialValues={initialValues}
+        key={draft.formKey}
+        initialValues={draft.initialValues}
         submitLabel="Добавить"
         onSubmit={handleSubmit}
         onCancel={() => router.back()}
-        onChange={handleChange}
+        onChange={draft.handleChange}
       />
-    </ScrollView>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  loading: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  banner: {
-    marginHorizontal: 16,
-    marginTop: 12,
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  bannerTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  bannerText: {
-    fontSize: 13,
-    marginTop: 4,
-  },
-  bannerButtons: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    marginTop: 12,
-  },
-  bannerSecondary: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    marginRight: 8,
-  },
-  bannerPrimary: {
-    borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-  },
-  bannerPrimaryText: {
-    fontWeight: '600',
-  },
-});

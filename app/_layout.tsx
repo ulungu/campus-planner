@@ -3,6 +3,7 @@ import { ActivityIndicator, View, StyleSheet } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ThemeProvider, useTheme } from '../src/context/ThemeContext';
+import { LOADING_COLORS } from '../src/theme/colors';
 import { TasksProvider } from '../src/context/TasksContext';
 
 function RootStack() {
@@ -11,7 +12,7 @@ function RootStack() {
   if (isLoading) {
     return (
       <View style={styles.loading}>
-        <ActivityIndicator size="large" color="#FFFFFF" />
+        <ActivityIndicator size="large" color={LOADING_COLORS.indicator} />
       </View>
     );
   }
@@ -54,6 +55,6 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#808080',
+    backgroundColor: LOADING_COLORS.background,
   },
 });

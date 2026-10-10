@@ -1,3 +1,5 @@
+import { TaskPriority } from '../types/task';
+
 export type ThemeName = 'light' | 'dark';
 
 export interface ThemeColors {
@@ -13,7 +15,16 @@ export interface ThemeColors {
   danger: string;
   success: string;
   placeholder: string;
+  shadow: string;
+  priority: Record<TaskPriority, string>;
+  onPriority: string;
 }
+
+const PRIORITY_COLORS: Record<TaskPriority, string> = {
+  low: '#4CAF50',
+  medium: '#FF9800',
+  high: '#F44336',
+};
 
 export const THEMES: Record<ThemeName, ThemeColors> = {
   light: {
@@ -29,6 +40,9 @@ export const THEMES: Record<ThemeName, ThemeColors> = {
     danger: '#F44336',
     success: '#4CAF50',
     placeholder: '#999999',
+    shadow: '#000000',
+    priority: PRIORITY_COLORS,
+    onPriority: '#FFFFFF',
   },
   dark: {
     background: '#121212',
@@ -43,8 +57,17 @@ export const THEMES: Record<ThemeName, ThemeColors> = {
     danger: '#FF6B60',
     success: '#66BB6A',
     placeholder: '#777777',
+    shadow: '#000000',
+    priority: PRIORITY_COLORS,
+    onPriority: '#FFFFFF',
   },
 };
+
+// Фон экрана загрузки, пока тема ещё не прочитана из AsyncStorage
+export const LOADING_COLORS = {
+  background: '#808080',
+  indicator: '#FFFFFF',
+} as const;
 
 export const THEME_LABELS: Record<ThemeName, string> = {
   light: 'Светлая',

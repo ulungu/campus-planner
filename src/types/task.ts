@@ -1,3 +1,4 @@
+export type TaskStatus = 'active' | 'completed';
 export type TaskPriority = 'low' | 'medium' | 'high';
 
 export interface Task {
@@ -5,10 +6,30 @@ export interface Task {
   title: string;
   subject: string;
   priority: TaskPriority;
-  isCompleted: boolean;
+  status: TaskStatus;
+  createdAt: string;
+  dueDate?: string;
 }
 
-export type TaskFormValues = Omit<Task, 'id' | 'isCompleted'>;
+export type CreateTaskInput = Omit<Task, 'id' | 'createdAt' | 'status'>;
+export type UpdateTaskInput = Partial<CreateTaskInput> & { status?: TaskStatus };
+
+// Значения формы совпадают с данными для создания задачи
+export type TaskFormValues = CreateTaskInput;
+
+// Фильтр списка: конкретный статус или все задачи
+export type TaskStatusFilter = TaskStatus | 'all';
+
+export interface TaskFilterOptions {
+  status: TaskStatusFilter;
+  query: string;
+}
+
+export interface TaskCounts {
+  total: number;
+  active: number;
+  completed: number;
+}
 
 export const PRIORITY_LABELS: Record<TaskPriority, string> = {
   low: 'Низкий',
@@ -16,8 +37,13 @@ export const PRIORITY_LABELS: Record<TaskPriority, string> = {
   high: 'Высокий',
 };
 
-export const PRIORITY_COLORS: Record<TaskPriority, string> = {
-  low: '#4CAF50',
-  medium: '#FF9800',
-  high: '#F44336',
+export const STATUS_LABELS: Record<TaskStatus, string> = {
+  active: 'В процессе',
+  completed: 'Выполнено',
+};
+
+export const STATUS_FILTER_LABELS: Record<TaskStatusFilter, string> = {
+  all: 'Все',
+  active: 'Активные',
+  completed: 'Выполненные',
 };

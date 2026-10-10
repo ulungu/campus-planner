@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState } from 'react';
-import { Task, TaskFormValues } from '../types/task';
+import React, { createContext, useCallback, useMemo, useReducer } from 'react';
+import { CreateTaskInput, Task, UpdateTaskInput } from '../types/task';
+import { applyTaskUpdate, buildTask, toggleStatus } from '../utils/task';
 
 const initialTasks: Task[] = [
   {
@@ -7,83 +8,103 @@ const initialTasks: Task[] = [
     title: 'Решить задачи по матанализу №3',
     subject: 'Математический анализ',
     priority: 'high',
-    isCompleted: false,
+    status: 'active',
+    createdAt: '2026-09-20T09:00:00.000Z',
+    dueDate: '2026-09-30',
   },
   {
     id: '2',
     title: 'Прочитать главу 4 учебника по истории',
     subject: 'История',
     priority: 'low',
-    isCompleted: true,
+    status: 'completed',
+    createdAt: '2026-09-21T09:00:00.000Z',
   },
   {
     id: '3',
     title: 'Подготовить доклад по физике',
     subject: 'Физика',
     priority: 'medium',
-    isCompleted: false,
+    status: 'active',
+    createdAt: '2026-09-22T09:00:00.000Z',
+    dueDate: '2026-12-15',
   },
   {
     id: '4',
     title: 'Сделать лабораторную по программированию',
     subject: 'Программирование',
     priority: 'high',
-    isCompleted: false,
+    status: 'active',
+    createdAt: '2026-09-23T09:00:00.000Z',
   },
 ];
 
-interface TasksContextValue {
+// Публичный интерфейс контекста: экраны знают только эти операции
+export interface TasksContextValue {
   tasks: Task[];
   getTaskById: (id: string) => Task | undefined;
-  addTask: (data: TaskFormValues) => void;
-  updateTask: (id: string, data: TaskFormValues) => void;
-  toggleTask: (id: string) => void;
-  deleteTask: (id: string) => void;
+  createTask: (input: CreateTaskInput) => Task;
+  updateTask: (id: string, input: UpdateTaskInput) => void;
+  removeTask: (id: string) => void;
+  toggleTaskStatus: (id: string) => void;
 }
 
-const TasksContext = createContext<TasksContextValue | null>(null);
+// Действия редьюсера — размеченное объединение (discriminated union)
+type TasksAction =
+  | { type: 'create'; task: Task }
+  | { type: 'update'; id: string; input: UpdateTaskInput }
+  | { type: 'remove'; id: string }
+  | { type: 'toggle'; id: string };
+
+function tasksReducer(state: Task[], action: TasksAction): Task[] {
+  switch (action.type) {
+    case 'create':
+      return [action.task, ...state];
+    case 'update':
+      return state.map((task) =>
+        task.id === action.id ? applyTaskUpdate(task, action.input) : task
+      );
+    case 'remove':
+      return state.filter((task) => task.id !== action.id);
+    case 'toggle':
+      return state.map((task) =>
+        task.id === action.id ? { ...task, status: toggleStatus(task.status) } : task
+      );
+  }
+}
+
+export const TasksContext = createContext<TasksContextValue | null>(null);
 
 export function TasksProvider({ children }: { children: React.ReactNode }) {
-  const [tasks, setTasks] = useState<Task[]>(initialTasks);
+  const [tasks, dispatch] = useReducer(tasksReducer, initialTasks);
 
-  const getTaskById = (id: string) => tasks.find((task) => task.id === id);
-
-  const addTask = (data: TaskFormValues) => {
-    const newTask: Task = { id: String(Date.now()), ...data, isCompleted: false };
-    setTasks((prev) => [newTask, ...prev]);
-  };
-
-  const updateTask = (id: string, data: TaskFormValues) => {
-    setTasks((prev) =>
-      prev.map((task) => (task.id === id ? { ...task, ...data } : task))
-    );
-  };
-
-  const toggleTask = (id: string) => {
-    setTasks((prev) =>
-      prev.map((task) =>
-        task.id === id ? { ...task, isCompleted: !task.isCompleted } : task
-      )
-    );
-  };
-
-  const deleteTask = (id: string) => {
-    setTasks((prev) => prev.filter((task) => task.id !== id));
-  };
-
-  return (
-    <TasksContext.Provider
-      value={{ tasks, getTaskById, addTask, updateTask, toggleTask, deleteTask }}
-    >
-      {children}
-    </TasksContext.Provider>
+  const getTaskById = useCallback(
+    (id: string) => tasks.find((task) => task.id === id),
+    [tasks]
   );
-}
 
-export function useTasks(): TasksContextValue {
-  const context = useContext(TasksContext);
-  if (!context) {
-    throw new Error('useTasks должен использоваться внутри TasksProvider');
-  }
-  return context;
+  const createTask = useCallback((input: CreateTaskInput) => {
+    const task = buildTask(input);
+    dispatch({ type: 'create', task });
+    return task;
+  }, []);
+
+  const updateTask = useCallback((id: string, input: UpdateTaskInput) => {
+    dispatch({ type: 'update', id, input });
+  }, []);
+
+  const removeTask = useCallback((id: string) => {
+    dispatch({ type: 'remove', id });
+  }, []);
+
+  const toggleTaskStatus = useCallback((id: string) => {
+    dispatch({ type: 'toggle', id });
+  }, []);
+
+  const value = useMemo<TasksContextValue>(
+    () => ({ tasks, getTaskById, createTask, updateTask, removeTask, toggleTaskStatus }),
+    [tasks, getTaskById, createTask, updateTask, removeTask, toggleTaskStatus]
+  );
+
+  return <TasksContext.Provider value={value}>{children}</TasksContext.Provider>;
 }

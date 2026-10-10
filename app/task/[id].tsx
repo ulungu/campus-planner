@@ -1,14 +1,22 @@
 import React, { useMemo } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
-import { useTasks } from '../../src/context/TasksContext';
+import { StyleSheet, Text, View } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
+import Screen from '../../src/components/ui/Screen';
+import AppButton from '../../src/components/ui/AppButton';
+import EmptyState from '../../src/components/ui/EmptyState';
+import PriorityBadge from '../../src/components/task/PriorityBadge';
+import { useTasks } from '../../src/hooks/useTasks';
 import { useTheme } from '../../src/context/ThemeContext';
 import { ThemeColors } from '../../src/theme/colors';
-import { PRIORITY_COLORS, PRIORITY_LABELS } from '../../src/types/task';
+import { fontSize, radius, spacing } from '../../src/theme/spacing';
+import { STATUS_LABELS } from '../../src/types/task';
+import { TaskRouteParams } from '../../src/types/navigation';
+import { formatDueDate, isOverdue } from '../../src/utils/task';
+import { goBackOrHome, openEditTask } from '../../src/navigation/actions';
 
 export default function TaskDetailsScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const { getTaskById, toggleTask } = useTasks();
+  const { id } = useLocalSearchParams<TaskRouteParams>();
+  const { getTaskById, toggleTaskStatus } = useTasks();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -16,20 +24,20 @@ export default function TaskDetailsScreen() {
 
   if (!task) {
     return (
-      <View style={styles.notFound}>
-        <Text style={styles.value}>Задача не найдена</Text>
-        <Pressable
-          style={styles.primaryButton}
-          onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
-        >
-          <Text style={styles.primaryButtonText}>К списку задач</Text>
-        </Pressable>
-      </View>
+      <Screen>
+        <EmptyState
+          title="Задача не найдена"
+          actionLabel="К списку задач"
+          onAction={goBackOrHome}
+        />
+      </Screen>
     );
   }
 
+  const overdue = isOverdue(task);
+
   return (
-    <ScrollView contentContainerStyle={styles.content}>
+    <Screen scroll padding="md">
       <View style={styles.card}>
         <Text style={styles.label}>Название</Text>
         <Text style={styles.title}>{task.title}</Text>
@@ -38,108 +46,67 @@ export default function TaskDetailsScreen() {
         <Text style={styles.value}>{task.subject}</Text>
 
         <Text style={styles.label}>Приоритет</Text>
-        <View
-          style={[
-            styles.priorityBadge,
-            { backgroundColor: PRIORITY_COLORS[task.priority] },
-          ]}
-        >
-          <Text style={styles.priorityText}>{PRIORITY_LABELS[task.priority]}</Text>
-        </View>
+        <PriorityBadge priority={task.priority} size="md" />
 
         <Text style={styles.label}>Статус</Text>
-        <Text style={styles.value}>
-          {task.isCompleted ? 'Выполнено' : 'В процессе'}
+        <Text style={styles.value}>{STATUS_LABELS[task.status]}</Text>
+
+        <Text style={styles.label}>Срок</Text>
+        <Text style={[styles.value, overdue && styles.overdue]}>
+          {task.dueDate ? formatDueDate(task.dueDate) : 'Не указан'}
+          {overdue ? ' (просрочено)' : ''}
         </Text>
       </View>
 
-      <Pressable style={styles.secondaryButton} onPress={() => toggleTask(task.id)}>
-        <Text style={styles.secondaryButtonText}>
-          {task.isCompleted ? 'Вернуть в работу' : 'Отметить выполненной'}
-        </Text>
-      </Pressable>
-
-      <Pressable
-        style={styles.primaryButton}
-        onPress={() =>
-          router.push({ pathname: '/task/edit/[id]', params: { id: task.id } })
-        }
-      >
-        <Text style={styles.primaryButtonText}>Редактировать</Text>
-      </Pressable>
-    </ScrollView>
+      <AppButton
+        title={task.status === 'completed' ? 'Вернуть в работу' : 'Отметить выполненной'}
+        variant="secondary"
+        onPress={() => toggleTaskStatus(task.id)}
+        style={styles.firstButton}
+      />
+      <AppButton
+        title="Редактировать"
+        onPress={() => openEditTask(task.id)}
+        style={styles.nextButton}
+      />
+    </Screen>
   );
 }
 
 const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
-    content: {
-      padding: 16,
-    },
-    notFound: {
-      flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: 24,
-    },
     card: {
       backgroundColor: colors.card,
-      borderRadius: 12,
-      padding: 16,
-      shadowColor: '#000',
+      borderRadius: radius.lg,
+      padding: spacing.md,
+      shadowColor: colors.shadow,
       shadowOpacity: 0.06,
       shadowRadius: 4,
       shadowOffset: { width: 0, height: 2 },
     },
     label: {
-      fontSize: 13,
+      fontSize: fontSize.sm,
       color: colors.textSecondary,
-      marginTop: 12,
-      marginBottom: 4,
+      marginTop: spacing.sm + spacing.xs,
+      marginBottom: spacing.xs,
     },
     title: {
-      fontSize: 20,
+      fontSize: fontSize.xl,
       fontWeight: '700',
       color: colors.text,
     },
     value: {
-      fontSize: 16,
+      fontSize: fontSize.lg,
       color: colors.text,
     },
-    priorityBadge: {
-      alignSelf: 'flex-start',
-      paddingHorizontal: 10,
-      paddingVertical: 3,
-      borderRadius: 8,
-    },
-    priorityText: {
-      fontSize: 12,
-      color: '#fff',
+    overdue: {
+      color: colors.danger,
       fontWeight: '600',
     },
-    secondaryButton: {
-      borderWidth: 1,
-      borderColor: colors.primary,
-      borderRadius: 10,
-      paddingVertical: 12,
-      alignItems: 'center',
-      marginTop: 16,
+    firstButton: {
+      marginTop: spacing.md,
     },
-    secondaryButtonText: {
-      color: colors.primary,
-      fontSize: 15,
-      fontWeight: '600',
-    },
-    primaryButton: {
-      backgroundColor: colors.primary,
-      borderRadius: 10,
-      paddingVertical: 12,
-      alignItems: 'center',
-      marginTop: 10,
-    },
-    primaryButtonText: {
-      color: colors.onPrimary,
-      fontSize: 15,
-      fontWeight: '600',
+    nextButton: {
+      marginTop: spacing.sm + spacing.xxs,
     },
   });

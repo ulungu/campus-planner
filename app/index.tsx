@@ -1,47 +1,44 @@
-import React, { useMemo, useState } from 'react';
-import { View, Text, FlatList, Pressable, StyleSheet } from 'react-native';
-import { Stack, router } from 'expo-router';
-import TaskCard from '../src/components/TaskCard';
-import { useTasks } from '../src/context/TasksContext';
+import React, { useMemo } from 'react';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Stack } from 'expo-router';
+import TaskCard from '../src/components/task/TaskCard';
+import StatusFilter from '../src/components/task/StatusFilter';
+import Screen from '../src/components/ui/Screen';
+import AppButton from '../src/components/ui/AppButton';
+import AppInput from '../src/components/ui/AppInput';
+import EmptyState from '../src/components/ui/EmptyState';
+import { useTasks } from '../src/hooks/useTasks';
+import { useTaskFilters } from '../src/hooks/useTaskFilters';
 import { useTheme } from '../src/context/ThemeContext';
 import { ThemeColors } from '../src/theme/colors';
-
-type FilterType = 'all' | 'active' | 'completed';
-
-const filters: { key: FilterType; label: string }[] = [
-  { key: 'all', label: 'Все' },
-  { key: 'active', label: 'Активные' },
-  { key: 'completed', label: 'Выполненные' },
-];
+import { fontSize, spacing } from '../src/theme/spacing';
+import { openNewTask, openSettings, openTask } from '../src/navigation/actions';
 
 export default function TaskListScreen() {
-  const { tasks, toggleTask, deleteTask } = useTasks();
+  const { tasks, toggleTaskStatus, removeTask } = useTasks();
+  const { status, setStatus, query, setQuery, visibleTasks, counts, isSearching } =
+    useTaskFilters(tasks);
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const [filter, setFilter] = useState<FilterType>('all');
 
-  const totalCount = tasks.length;
-  const completedCount = tasks.filter((task) => task.isCompleted).length;
-
-  const filteredTasks = tasks.filter((task) => {
-    if (filter === 'active') return !task.isCompleted;
-    if (filter === 'completed') return task.isCompleted;
-    return true;
-  });
-
-  const openTask = (id: string) => {
-    router.push({
-      pathname: '/task/[id]',
-      params: { id },
-    });
-  };
+  const emptyState = isSearching ? (
+    <EmptyState
+      icon="🔍"
+      title="Ничего не найдено"
+      description={`По запросу «${query.trim()}» задач нет`}
+      actionLabel="Сбросить поиск"
+      onAction={() => setQuery('')}
+    />
+  ) : (
+    <EmptyState icon="📋" title="Список пока пуст" />
+  );
 
   return (
-    <View style={styles.container}>
+    <Screen>
       <Stack.Screen
         options={{
           headerRight: () => (
-            <Pressable onPress={() => router.push('/settings')}>
+            <Pressable onPress={openSettings}>
               <Text style={styles.headerLink}>Настройки</Text>
             </Pressable>
           ),
@@ -50,127 +47,65 @@ export default function TaskListScreen() {
 
       <View style={styles.header}>
         <Text style={styles.headerStats}>
-          Всего: {totalCount} · Выполнено: {completedCount}
+          Всего: {counts.total} · Выполнено: {counts.completed}
         </Text>
+        <AppInput
+          value={query}
+          onChangeText={setQuery}
+          placeholder="Поиск по названию или предмету"
+          clearButtonMode="while-editing"
+          autoCorrect={false}
+        />
       </View>
 
-      <View style={styles.filterRow}>
-        {filters.map((f) => (
-          <Pressable
-            key={f.key}
-            style={[
-              styles.filterButton,
-              filter === f.key && styles.filterButtonActive,
-            ]}
-            onPress={() => setFilter(f.key)}
-          >
-            <Text
-              style={[
-                styles.filterButtonText,
-                filter === f.key && styles.filterButtonTextActive,
-              ]}
-            >
-              {f.label}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
+      <StatusFilter value={status} onChange={setStatus} />
 
-      <Pressable
+      <AppButton
+        title="+ Добавить задачу"
+        onPress={openNewTask}
         style={styles.addButton}
-        onPress={() => router.push('/task/new')}
-      >
-        <Text style={styles.addButtonText}>+ Добавить задачу</Text>
-      </Pressable>
+      />
 
       <FlatList
-        data={filteredTasks}
+        data={visibleTasks}
         keyExtractor={(item) => item.id}
+        keyboardShouldPersistTaps="handled"
         renderItem={({ item }) => (
           <TaskCard
             task={item}
             onPress={openTask}
-            onToggleComplete={toggleTask}
-            onDelete={deleteTask}
+            onToggleStatus={toggleTaskStatus}
+            onRemove={removeTask}
           />
         )}
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyStateText}>Список пока пуст</Text>
-          </View>
-        }
+        ListEmptyComponent={emptyState}
         contentContainerStyle={
-          filteredTasks.length === 0 ? styles.emptyListContent : undefined
+          visibleTasks.length === 0 ? styles.emptyListContent : undefined
         }
       />
-    </View>
+    </Screen>
   );
 }
 
 const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: colors.background,
-    },
     headerLink: {
       color: colors.primary,
-      fontSize: 15,
+      fontSize: fontSize.md,
       fontWeight: '600',
     },
     header: {
-      paddingHorizontal: 16,
-      paddingTop: 12,
-      paddingBottom: 8,
+      paddingHorizontal: spacing.md,
+      paddingTop: spacing.sm + spacing.xs,
+      paddingBottom: spacing.sm,
     },
     headerStats: {
-      fontSize: 14,
+      fontSize: fontSize.sm + 1,
       color: colors.textSecondary,
     },
-    filterRow: {
-      flexDirection: 'row',
-      paddingHorizontal: 16,
-      marginBottom: 8,
-    },
-    filterButton: {
-      paddingVertical: 6,
-      paddingHorizontal: 14,
-      borderRadius: 16,
-      backgroundColor: colors.chip,
-      marginRight: 8,
-    },
-    filterButtonActive: {
-      backgroundColor: colors.primary,
-    },
-    filterButtonText: {
-      fontSize: 13,
-      color: colors.chipText,
-    },
-    filterButtonTextActive: {
-      color: colors.onPrimary,
-      fontWeight: '600',
-    },
     addButton: {
-      backgroundColor: colors.primary,
-      borderRadius: 10,
-      paddingVertical: 12,
-      marginHorizontal: 16,
-      marginBottom: 8,
-      alignItems: 'center',
-    },
-    addButtonText: {
-      color: colors.onPrimary,
-      fontSize: 15,
-      fontWeight: '600',
-    },
-    emptyState: {
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginTop: 40,
-    },
-    emptyStateText: {
-      fontSize: 15,
-      color: colors.placeholder,
+      marginHorizontal: spacing.md,
+      marginBottom: spacing.sm,
     },
     emptyListContent: {
       flexGrow: 1,
