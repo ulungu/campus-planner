@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { TaskFormValues } from '../types/task';
 import { clearDraft, loadDraft, saveDraft } from '../storage/draftStorage';
 
-// Логика черновика новой задачи (ЛР2), вынесенная из экрана
 export function useTaskDraft() {
   const [isLoading, setIsLoading] = useState(true);
   const [pendingDraft, setPendingDraft] = useState<TaskFormValues | null>(null);

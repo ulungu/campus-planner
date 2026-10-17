@@ -16,6 +16,10 @@ export interface ThemeColors {
   success: string;
   placeholder: string;
   shadow: string;
+  // Подсветка только что созданной задачи
+  highlight: string;
+  // Фон дорожки прогресс-бара
+  track: string;
   priority: Record<TaskPriority, string>;
   onPriority: string;
 }
@@ -41,6 +45,8 @@ export const THEMES: Record<ThemeName, ThemeColors> = {
     success: '#4CAF50',
     placeholder: '#999999',
     shadow: '#000000',
+    highlight: '#D6EBFD',
+    track: '#E5E5EA',
     priority: PRIORITY_COLORS,
     onPriority: '#FFFFFF',
   },
@@ -58,6 +64,8 @@ export const THEMES: Record<ThemeName, ThemeColors> = {
     success: '#66BB6A',
     placeholder: '#777777',
     shadow: '#000000',
+    highlight: '#1B3A57',
+    track: '#2C2C2E',
     priority: PRIORITY_COLORS,
     onPriority: '#FFFFFF',
   },

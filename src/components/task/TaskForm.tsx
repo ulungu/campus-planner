@@ -107,6 +107,16 @@ export default function TaskForm({
         error={errors.dueDate}
       />
 
+      <AppInput
+        label="Описание (необязательно)"
+        value={values.description ?? ''}
+        onChangeText={(description) => update({ description })}
+        placeholder="Что именно нужно сделать"
+        multiline
+        textAlignVertical="top"
+        maxLength={300}
+      />
+
       <View style={styles.buttonsRow}>
         <AppButton
           title="Отмена"

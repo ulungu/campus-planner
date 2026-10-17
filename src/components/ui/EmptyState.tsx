@@ -8,7 +8,6 @@ import AppButton from './AppButton';
 interface EmptyStateProps {
   title: string;
   description?: string;
-  // Эмодзи или короткий символ над заголовком
   icon?: string;
   actionLabel?: string;
   onAction?: () => void;

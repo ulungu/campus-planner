@@ -115,8 +115,9 @@ export function buildTask(
 
 export function applyTaskUpdate(task: Task, input: UpdateTaskInput): Task {
   const updated: Task = { ...task, ...input };
-  // Пустой срок означает «срок не задан»
+  // Пустой срок означает «срок не задан», пустое описание — «описания нет»
   if (!updated.dueDate) delete updated.dueDate;
+  if (!updated.description) delete updated.description;
   return updated;
 }
 
@@ -142,13 +143,15 @@ export function hasErrors(errors: TaskInputErrors): boolean {
   return Object.keys(errors).length > 0;
 }
 
-// Обрезает пробелы и убирает пустой срок
+// Обрезает пробелы и убирает пустые срок и описание
 export function normalizeTaskInput(input: CreateTaskInput): CreateTaskInput {
   const dueDate = input.dueDate?.trim();
+  const description = input.description?.trim();
   return {
     title: input.title.trim(),
     subject: input.subject.trim(),
     priority: input.priority,
     ...(dueDate ? { dueDate } : {}),
+    ...(description ? { description } : {}),
   };
 }

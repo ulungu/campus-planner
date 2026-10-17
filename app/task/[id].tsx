@@ -42,6 +42,13 @@ export default function TaskDetailsScreen() {
         <Text style={styles.label}>Название</Text>
         <Text style={styles.title}>{task.title}</Text>
 
+        {task.description ? (
+          <>
+            <Text style={styles.label}>Описание</Text>
+            <Text style={styles.value}>{task.description}</Text>
+          </>
+        ) : null}
+
         <Text style={styles.label}>Предмет</Text>
         <Text style={styles.value}>{task.subject}</Text>
 

@@ -1,7 +1,9 @@
 import React, { useMemo } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, { LinearTransition } from 'react-native-reanimated';
 import { Stack } from 'expo-router';
 import TaskCard from '../src/components/task/TaskCard';
+import TaskProgressBar from '../src/components/task/TaskProgressBar';
 import StatusFilter from '../src/components/task/StatusFilter';
 import Screen from '../src/components/ui/Screen';
 import AppButton from '../src/components/ui/AppButton';
@@ -12,10 +14,11 @@ import { useTaskFilters } from '../src/hooks/useTaskFilters';
 import { useTheme } from '../src/context/ThemeContext';
 import { ThemeColors } from '../src/theme/colors';
 import { fontSize, spacing } from '../src/theme/spacing';
-import { openNewTask, openSettings, openTask } from '../src/navigation/actions';
+import { openEditTask, openNewTask, openSettings, openTask } from '../src/navigation/actions';
 
 export default function TaskListScreen() {
-  const { tasks, toggleTaskStatus, removeTask } = useTasks();
+  const { tasks, lastCreatedId, clearLastCreated, toggleTaskStatus, removeTask } =
+    useTasks();
   const { status, setStatus, query, setQuery, visibleTasks, counts, isSearching } =
     useTaskFilters(tasks);
   const { colors } = useTheme();
@@ -46,9 +49,7 @@ export default function TaskListScreen() {
       />
 
       <View style={styles.header}>
-        <Text style={styles.headerStats}>
-          Всего: {counts.total} · Выполнено: {counts.completed}
-        </Text>
+        <TaskProgressBar completed={counts.completed} total={counts.total} />
         <AppInput
           value={query}
           onChangeText={setQuery}
@@ -66,15 +67,20 @@ export default function TaskListScreen() {
         style={styles.addButton}
       />
 
-      <FlatList
+      <Animated.FlatList
         data={visibleTasks}
         keyExtractor={(item) => item.id}
         keyboardShouldPersistTaps="handled"
+        // Соседние карточки плавно сдвигаются, когда задача появляется, удаляется или раскрывается
+        itemLayoutAnimation={LinearTransition}
         renderItem={({ item }) => (
           <TaskCard
             task={item}
+            highlighted={item.id === lastCreatedId}
+            onHighlightShown={clearLastCreated}
             onPress={openTask}
             onToggleStatus={toggleTaskStatus}
+            onEdit={openEditTask}
             onRemove={removeTask}
           />
         )}
@@ -98,10 +104,6 @@ const createStyles = (colors: ThemeColors) =>
       paddingHorizontal: spacing.md,
       paddingTop: spacing.sm + spacing.xs,
       paddingBottom: spacing.sm,
-    },
-    headerStats: {
-      fontSize: fontSize.sm + 1,
-      color: colors.textSecondary,
     },
     addButton: {
       marginHorizontal: spacing.md,

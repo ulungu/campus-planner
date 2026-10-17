@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useMemo, useReducer } from 'react';
+import React, { createContext, useCallback, useMemo, useReducer, useState } from 'react';
 import { CreateTaskInput, Task, UpdateTaskInput } from '../types/task';
 import { applyTaskUpdate, buildTask, toggleStatus } from '../utils/task';
 
@@ -42,6 +42,8 @@ const initialTasks: Task[] = [
 // Публичный интерфейс контекста: экраны знают только эти операции
 export interface TasksContextValue {
   tasks: Task[];
+  lastCreatedId: string | null;
+  clearLastCreated: () => void;
   getTaskById: (id: string) => Task | undefined;
   createTask: (input: CreateTaskInput) => Task;
   updateTask: (id: string, input: UpdateTaskInput) => void;
@@ -49,7 +51,6 @@ export interface TasksContextValue {
   toggleTaskStatus: (id: string) => void;
 }
 
-// Действия редьюсера — размеченное объединение (discriminated union)
 type TasksAction =
   | { type: 'create'; task: Task }
   | { type: 'update'; id: string; input: UpdateTaskInput }
@@ -77,6 +78,7 @@ export const TasksContext = createContext<TasksContextValue | null>(null);
 
 export function TasksProvider({ children }: { children: React.ReactNode }) {
   const [tasks, dispatch] = useReducer(tasksReducer, initialTasks);
+  const [lastCreatedId, setLastCreatedId] = useState<string | null>(null);
 
   const getTaskById = useCallback(
     (id: string) => tasks.find((task) => task.id === id),
@@ -86,8 +88,11 @@ export function TasksProvider({ children }: { children: React.ReactNode }) {
   const createTask = useCallback((input: CreateTaskInput) => {
     const task = buildTask(input);
     dispatch({ type: 'create', task });
+    setLastCreatedId(task.id);
     return task;
   }, []);
+
+  const clearLastCreated = useCallback(() => setLastCreatedId(null), []);
 
   const updateTask = useCallback((id: string, input: UpdateTaskInput) => {
     dispatch({ type: 'update', id, input });
@@ -102,8 +107,26 @@ export function TasksProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo<TasksContextValue>(
-    () => ({ tasks, getTaskById, createTask, updateTask, removeTask, toggleTaskStatus }),
-    [tasks, getTaskById, createTask, updateTask, removeTask, toggleTaskStatus]
+    () => ({
+      tasks,
+      lastCreatedId,
+      clearLastCreated,
+      getTaskById,
+      createTask,
+      updateTask,
+      removeTask,
+      toggleTaskStatus,
+    }),
+    [
+      tasks,
+      lastCreatedId,
+      clearLastCreated,
+      getTaskById,
+      createTask,
+      updateTask,
+      removeTask,
+      toggleTaskStatus,
+    ]
   );
 
   return <TasksContext.Provider value={value}>{children}</TasksContext.Provider>;

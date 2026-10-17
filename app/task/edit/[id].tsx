@@ -26,8 +26,11 @@ export default function EditTaskScreen() {
   }
 
   const handleSubmit = (values: TaskFormValues) => {
-    // dueDate передаём явно: если поле очистили, срок у задачи удалится
-    updateTask(task.id, { ...values, dueDate: values.dueDate });
+    updateTask(task.id, {
+      ...values,
+      dueDate: values.dueDate,
+      description: values.description,
+    });
     router.back();
   };
 
@@ -39,6 +42,7 @@ export default function EditTaskScreen() {
           subject: task.subject,
           priority: task.priority,
           dueDate: task.dueDate,
+          description: task.description,
         }}
         submitLabel="Сохранить"
         onSubmit={handleSubmit}

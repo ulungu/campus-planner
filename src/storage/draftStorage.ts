@@ -5,7 +5,6 @@ export const DRAFT_STORAGE_KEY = '@campus-planner/task-draft';
 
 const PRIORITIES: readonly TaskPriority[] = ['low', 'medium', 'high'];
 
-// Type guard: проверяем, что из хранилища пришёл объект нужной формы
 function isTaskFormValues(value: unknown): value is TaskFormValues {
   if (typeof value !== 'object' || value === null) return false;
   const draft = value as Record<string, unknown>;
@@ -13,12 +12,18 @@ function isTaskFormValues(value: unknown): value is TaskFormValues {
     typeof draft.title === 'string' &&
     typeof draft.subject === 'string' &&
     PRIORITIES.includes(draft.priority as TaskPriority) &&
-    (draft.dueDate === undefined || typeof draft.dueDate === 'string')
+    (draft.dueDate === undefined || typeof draft.dueDate === 'string') &&
+    (draft.description === undefined || typeof draft.description === 'string')
   );
 }
 
 export function isDraftEmpty(draft: TaskFormValues): boolean {
-  return !draft.title.trim() && !draft.subject.trim() && !draft.dueDate?.trim();
+  return (
+    !draft.title.trim() &&
+    !draft.subject.trim() &&
+    !draft.dueDate?.trim() &&
+    !draft.description?.trim()
+  );
 }
 
 export async function loadDraft(): Promise<TaskFormValues | null> {

@@ -9,6 +9,7 @@ export interface Task {
   status: TaskStatus;
   createdAt: string;
   dueDate?: string;
+  description?: string;
 }
 
 export type CreateTaskInput = Omit<Task, 'id' | 'createdAt' | 'status'>;
