@@ -48,6 +48,8 @@ export interface TasksContextValue {
   createTask: (input: CreateTaskInput) => Task;
   updateTask: (id: string, input: UpdateTaskInput) => void;
   removeTask: (id: string) => void;
+  // Вернуть удалённую задачу на прежнее место в списке (отмена удаления)
+  restoreTask: (task: Task, index: number) => void;
   toggleTaskStatus: (id: string) => void;
 }
 
@@ -55,6 +57,7 @@ type TasksAction =
   | { type: 'create'; task: Task }
   | { type: 'update'; id: string; input: UpdateTaskInput }
   | { type: 'remove'; id: string }
+  | { type: 'restore'; task: Task; index: number }
   | { type: 'toggle'; id: string };
 
 function tasksReducer(state: Task[], action: TasksAction): Task[] {
@@ -67,6 +70,12 @@ function tasksReducer(state: Task[], action: TasksAction): Task[] {
       );
     case 'remove':
       return state.filter((task) => task.id !== action.id);
+    case 'restore': {
+      // Защита от повторного восстановления той же задачи
+      if (state.some((task) => task.id === action.task.id)) return state;
+      const index = Math.min(Math.max(action.index, 0), state.length);
+      return [...state.slice(0, index), action.task, ...state.slice(index)];
+    }
     case 'toggle':
       return state.map((task) =>
         task.id === action.id ? { ...task, status: toggleStatus(task.status) } : task
@@ -102,6 +111,10 @@ export function TasksProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: 'remove', id });
   }, []);
 
+  const restoreTask = useCallback((task: Task, index: number) => {
+    dispatch({ type: 'restore', task, index });
+  }, []);
+
   const toggleTaskStatus = useCallback((id: string) => {
     dispatch({ type: 'toggle', id });
   }, []);
@@ -115,6 +128,7 @@ export function TasksProvider({ children }: { children: React.ReactNode }) {
       createTask,
       updateTask,
       removeTask,
+      restoreTask,
       toggleTaskStatus,
     }),
     [
@@ -125,6 +139,7 @@ export function TasksProvider({ children }: { children: React.ReactNode }) {
       createTask,
       updateTask,
       removeTask,
+      restoreTask,
       toggleTaskStatus,
     ]
   );

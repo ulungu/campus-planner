@@ -3,6 +3,8 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { LinearTransition } from 'react-native-reanimated';
 import { Stack } from 'expo-router';
 import TaskCard from '../src/components/task/TaskCard';
+import SwipeableTaskCard from '../src/components/task/SwipeableTaskCard';
+import UndoBar from '../src/components/task/UndoBar';
 import TaskProgressBar from '../src/components/task/TaskProgressBar';
 import StatusFilter from '../src/components/task/StatusFilter';
 import Screen from '../src/components/ui/Screen';
@@ -11,14 +13,16 @@ import AppInput from '../src/components/ui/AppInput';
 import EmptyState from '../src/components/ui/EmptyState';
 import { useTasks } from '../src/hooks/useTasks';
 import { useTaskFilters } from '../src/hooks/useTaskFilters';
+import { UNDO_TIMEOUT, useRemoveWithUndo } from '../src/hooks/useRemoveWithUndo';
 import { useTheme } from '../src/context/ThemeContext';
 import { ThemeColors } from '../src/theme/colors';
 import { fontSize, spacing } from '../src/theme/spacing';
 import { openEditTask, openNewTask, openSettings, openTask } from '../src/navigation/actions';
 
 export default function TaskListScreen() {
-  const { tasks, lastCreatedId, clearLastCreated, toggleTaskStatus, removeTask } =
-    useTasks();
+  const { tasks, lastCreatedId, clearLastCreated, toggleTaskStatus } = useTasks();
+  // Удаление теперь только с подтверждением и с возможностью отмены (ЛР №5)
+  const { lastRemoved, confirmRemove, undo } = useRemoveWithUndo();
   const { status, setStatus, query, setQuery, visibleTasks, counts, isSearching } =
     useTaskFilters(tasks);
   const { colors } = useTheme();
@@ -74,21 +78,37 @@ export default function TaskListScreen() {
         // Соседние карточки плавно сдвигаются, когда задача появляется, удаляется или раскрывается
         itemLayoutAnimation={LinearTransition}
         renderItem={({ item }) => (
-          <TaskCard
+          // Свайп вправо — сменить статус, влево — удалить с подтверждением
+          <SwipeableTaskCard
             task={item}
-            highlighted={item.id === lastCreatedId}
-            onHighlightShown={clearLastCreated}
-            onPress={openTask}
-            onToggleStatus={toggleTaskStatus}
-            onEdit={openEditTask}
-            onRemove={removeTask}
-          />
+            onSwipeRight={toggleTaskStatus}
+            onSwipeLeft={confirmRemove}
+          >
+            <TaskCard
+              task={item}
+              highlighted={item.id === lastCreatedId}
+              onHighlightShown={clearLastCreated}
+              onPress={openTask}
+              onToggleStatus={toggleTaskStatus}
+              onEdit={openEditTask}
+              onRemove={confirmRemove}
+            />
+          </SwipeableTaskCard>
         )}
         ListEmptyComponent={emptyState}
         contentContainerStyle={
-          visibleTasks.length === 0 ? styles.emptyListContent : undefined
+          visibleTasks.length === 0 ? styles.emptyListContent : styles.listContent
         }
       />
+
+      {lastRemoved ? (
+        <UndoBar
+          key={lastRemoved.key}
+          title={lastRemoved.task.title}
+          duration={UNDO_TIMEOUT}
+          onUndo={undo}
+        />
+      ) : null}
     </Screen>
   );
 }
@@ -111,5 +131,9 @@ const createStyles = (colors: ThemeColors) =>
     },
     emptyListContent: {
       flexGrow: 1,
+    },
+    // Запас снизу, чтобы плашка «Отменить» не закрывала последнюю карточку
+    listContent: {
+      paddingBottom: spacing.xl * 2,
     },
   });

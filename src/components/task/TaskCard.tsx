@@ -2,10 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import Animated, {
   FadeIn,
-  FadeInDown,
   FadeOut,
   Extrapolation,
-  FadeOutLeft,
   LinearTransition,
   interpolate,
   interpolateColor,
@@ -129,9 +127,8 @@ export default function TaskCard({
   }));
 
   return (
+    // Появление/исчезновение и отступы карточки теперь задаёт обёртка SwipeableTaskCard (ЛР №5)
     <Animated.View
-      entering={FadeInDown.duration(300)}
-      exiting={FadeOutLeft.duration(250)}
       layout={LinearTransition.duration(EXPAND_DURATION)}
       style={[styles.card, cardStyle]}
     >
@@ -233,8 +230,6 @@ const createStyles = (colors: ThemeColors) =>
       backgroundColor: colors.card,
       borderRadius: radius.lg,
       padding: spacing.sm + spacing.xs,
-      marginHorizontal: spacing.md,
-      marginVertical: spacing.xs + spacing.xxs,
       shadowColor: colors.shadow,
       shadowOpacity: 0.06,
       shadowRadius: 4,
