@@ -1,18 +1,44 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Screen from '../src/components/ui/Screen';
-import { useTheme } from '../src/context/ThemeContext';
-import { THEME_LABELS, ThemeColors, ThemeName } from '../src/theme/colors';
-import { fontSize, radius, spacing } from '../src/theme/spacing';
+import Screen from '../../src/components/ui/Screen';
+import AppButton from '../../src/components/ui/AppButton';
+import { useAuth } from '../../src/hooks/useAuth';
+import { useTheme } from '../../src/context/ThemeContext';
+import { THEME_LABELS, ThemeColors, ThemeName } from '../../src/theme/colors';
+import { fontSize, radius, spacing } from '../../src/theme/spacing';
 
 const THEME_OPTIONS: ThemeName[] = ['light', 'dark'];
 
 export default function SettingsScreen() {
   const { theme, colors, setTheme } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const { user, signOut } = useAuth();
+  const [isSigningOut, setIsSigningOut] = useState(false);
+
+  // Удаляет токен из SecureStore и очищает сессию. Экран входа откроется сам:
+  // корневой layout закрывает раздел (app), как только isAuthenticated = false
+  const handleSignOut = async () => {
+    if (isSigningOut) return;
+    setIsSigningOut(true);
+    await signOut();
+  };
 
   return (
     <Screen padding="md">
+      <Text style={styles.sectionTitle}>Аккаунт</Text>
+      <View style={[styles.card, styles.accountCard]}>
+        <Text style={styles.rowText}>{user?.name ?? 'Пользователь'}</Text>
+        {user ? <Text style={styles.accountLogin}>{user.login}</Text> : null}
+      </View>
+      <AppButton
+        title={isSigningOut ? 'Выход…' : 'Выйти'}
+        variant="secondary"
+        onPress={handleSignOut}
+        disabled={isSigningOut}
+        style={styles.signOutButton}
+      />
+
+
       <Text style={styles.sectionTitle}>Тема оформления</Text>
       <View style={styles.card}>
         {THEME_OPTIONS.map((option, index) => {
@@ -57,6 +83,19 @@ const createStyles = (colors: ThemeColors) =>
       justifyContent: 'space-between',
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.md - spacing.xxs,
+    },
+    accountCard: {
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.md - spacing.xxs,
+    },
+    accountLogin: {
+      fontSize: fontSize.sm,
+      color: colors.textSecondary,
+      marginTop: spacing.xxs,
+    },
+    signOutButton: {
+      marginTop: spacing.sm + spacing.xs,
+      marginBottom: spacing.lg,
     },
     rowDivider: {
       borderTopWidth: 1,
