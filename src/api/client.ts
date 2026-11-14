@@ -1,7 +1,5 @@
 import { ApiErrorResponse } from '../types/auth';
 
-// Базовый адрес берётся из .env (EXPO_PUBLIC_API_URL). Это не секрет:
-// переменные EXPO_PUBLIC_* попадают в клиентский код
 const API_URL = (process.env.EXPO_PUBLIC_API_URL ?? '').replace(/\/+$/, '');
 
 // Статус 0 — запрос вообще не дошёл до сервера (нет сети, неверный адрес)

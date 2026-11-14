@@ -6,7 +6,6 @@ import { LoginInput, User } from '../types/auth';
 import { clearDraft } from '../storage/draftStorage';
 import { readToken, removeToken, saveToken } from './authStorage';
 
-// Публичный интерфейс контекста: экраны знают только эти поля и операции
 export interface AuthContextValue {
   user: User | null;
   // Токен держится в памяти приложения; на диске он только в SecureStore

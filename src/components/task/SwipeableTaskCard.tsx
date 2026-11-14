@@ -47,9 +47,7 @@ export default function SwipeableTaskCard({
   const translateX = useSharedValue(0);
   const id = task.id;
   const isCompleted = task.status === 'completed';
-  // Подпись правой области фиксируется в начале жеста. Иначе после свайпа
-  // статус сменится сразу, и пока карточка едет назад, вместо «Выполнить»
-  // мелькнёт «Вернуть»
+
   const [labelCompleted, setLabelCompleted] = useState(isCompleted);
 
   const pan = useMemo(
@@ -69,8 +67,6 @@ export default function SwipeableTaskCard({
         })
         .onEnd((_event, success) => {
           if (!success) return;
-          // Колбэки работают с React-состоянием, поэтому из worklet
-          // (UI-поток) вызываем их через runOnJS (JS-поток)
           if (translateX.value >= SWIPE_ACTION_THRESHOLD) {
             runOnJS(onSwipeRight)(id);
           } else if (translateX.value <= -SWIPE_ACTION_THRESHOLD) {
@@ -78,8 +74,6 @@ export default function SwipeableTaskCard({
           }
         })
         .onFinalize(() => {
-          // В любом случае (порог достигнут, не достигнут, жест отменён)
-          // карточка пружиной возвращается на место
           translateX.value = withSpring(0, RETURN_SPRING);
         }),
     [id, isCompleted, onSwipeRight, onSwipeLeft, translateX]

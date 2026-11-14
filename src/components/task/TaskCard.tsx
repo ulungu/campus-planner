@@ -127,7 +127,6 @@ export default function TaskCard({
   }));
 
   return (
-    // Появление/исчезновение и отступы карточки теперь задаёт обёртка SwipeableTaskCard (ЛР №5)
     <Animated.View
       layout={LinearTransition.duration(EXPAND_DURATION)}
       style={[styles.card, cardStyle]}

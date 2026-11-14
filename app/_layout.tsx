@@ -31,15 +31,10 @@ function RootStack() {
           contentStyle: { backgroundColor: colors.background },
         }}
       >
-        {/* Защищённый раздел: доступен только после входа. Если guard ложный,
-            любой маршрут из (app), даже открытый по прямой ссылке,
-            перенаправляет на первый доступный экран — экран входа */}
         <Stack.Protected guard={isAuthenticated}>
           <Stack.Screen name="(app)" />
         </Stack.Protected>
 
-        {/* Публичный раздел: после входа он закрывается, и пользователь
-            автоматически попадает в (app) */}
         <Stack.Protected guard={!isAuthenticated}>
           <Stack.Screen name="(auth)/login" />
         </Stack.Protected>

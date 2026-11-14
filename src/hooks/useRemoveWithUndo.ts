@@ -10,21 +10,14 @@ export interface RemovedTask {
   task: Task;
   // Позиция в общем списке, чтобы вернуть задачу на прежнее место
   index: number;
-  // Уникален для каждого удаления: перезапускает таймер и анимацию плашки
   key: number;
 }
 
-// Удаление с подтверждением и временной возможностью отмены.
-// Удалённая задача хранится только в состоянии экрана до конца сеанса.
 export function useRemoveWithUndo() {
   const { tasks, removeTask, restoreTask } = useTasks();
   const [lastRemoved, setLastRemoved] = useState<RemovedTask | null>(null);
   const removalCounter = useRef(0);
 
-  // Актуальный список читаем через ref: так confirmRemove не пересоздаётся
-  // при каждом изменении задач (и не пересоздаёт жесты всех карточек),
-  // а в момент нажатия «Удалить» берёт свежие данные, а не снимок
-  // на момент открытия Alert
   const tasksRef = useRef(tasks);
   useEffect(() => {
     tasksRef.current = tasks;
