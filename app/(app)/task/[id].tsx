@@ -1,18 +1,18 @@
 import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import Screen from '../../src/components/ui/Screen';
-import AppButton from '../../src/components/ui/AppButton';
-import EmptyState from '../../src/components/ui/EmptyState';
-import PriorityBadge from '../../src/components/task/PriorityBadge';
-import { useTasks } from '../../src/hooks/useTasks';
-import { useTheme } from '../../src/context/ThemeContext';
-import { ThemeColors } from '../../src/theme/colors';
-import { fontSize, radius, spacing } from '../../src/theme/spacing';
-import { STATUS_LABELS } from '../../src/types/task';
-import { TaskRouteParams } from '../../src/types/navigation';
-import { formatDueDate, isOverdue } from '../../src/utils/task';
-import { goBackOrHome, openEditTask } from '../../src/navigation/actions';
+import Screen from '../../../src/components/ui/Screen';
+import AppButton from '../../../src/components/ui/AppButton';
+import EmptyState from '../../../src/components/ui/EmptyState';
+import PriorityBadge from '../../../src/components/task/PriorityBadge';
+import { useTasks } from '../../../src/hooks/useTasks';
+import { useTheme } from '../../../src/context/ThemeContext';
+import { ThemeColors } from '../../../src/theme/colors';
+import { fontSize, radius, spacing } from '../../../src/theme/spacing';
+import { STATUS_LABELS } from '../../../src/types/task';
+import { TaskRouteParams } from '../../../src/types/navigation';
+import { formatDueDate, isOverdue } from '../../../src/utils/task';
+import { goBackOrHome, openEditTask } from '../../../src/navigation/actions';
 
 export default function TaskDetailsScreen() {
   const { id } = useLocalSearchParams<TaskRouteParams>();

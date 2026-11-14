@@ -5,12 +5,16 @@ import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { ThemeProvider, useTheme } from '../src/context/ThemeContext';
 import { LOADING_COLORS } from '../src/theme/colors';
-import { TasksProvider } from '../src/context/TasksContext';
+import { AuthProvider } from '../src/auth/AuthContext';
+import { useAuth } from '../src/hooks/useAuth';
 
 function RootStack() {
-  const { theme, colors, isLoading } = useTheme();
+  const { theme, colors, isLoading: isThemeLoading } = useTheme();
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
 
-  if (isLoading) {
+  // Пока тема читается из AsyncStorage, а сессия проверяется через /auth/me,
+  // навигатор не рендерится — значит, никаких перенаправлений до конца проверки
+  if (isThemeLoading || isAuthLoading) {
     return (
       <View style={styles.loading}>
         <ActivityIndicator size="large" color={LOADING_COLORS.indicator} />
@@ -23,19 +27,22 @@ function RootStack() {
       <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
       <Stack
         screenOptions={{
-          headerStyle: { backgroundColor: colors.card },
-          headerTintColor: colors.text,
+          headerShown: false,
           contentStyle: { backgroundColor: colors.background },
         }}
       >
-        <Stack.Screen name="index" options={{ title: 'Campus Planner' }} />
-        <Stack.Screen name="task/new" options={{ title: 'Новая задача' }} />
-        <Stack.Screen name="task/[id]" options={{ title: 'Задача' }} />
-        <Stack.Screen
-          name="task/edit/[id]"
-          options={{ title: 'Редактирование' }}
-        />
-        <Stack.Screen name="settings" options={{ title: 'Настройки' }} />
+        {/* Защищённый раздел: доступен только после входа. Если guard ложный,
+            любой маршрут из (app), даже открытый по прямой ссылке,
+            перенаправляет на первый доступный экран — экран входа */}
+        <Stack.Protected guard={isAuthenticated}>
+          <Stack.Screen name="(app)" />
+        </Stack.Protected>
+
+        {/* Публичный раздел: после входа он закрывается, и пользователь
+            автоматически попадает в (app) */}
+        <Stack.Protected guard={!isAuthenticated}>
+          <Stack.Screen name="(auth)/login" />
+        </Stack.Protected>
       </Stack>
     </>
   );
@@ -46,9 +53,9 @@ export default function RootLayout() {
     // Корневой контейнер жестов: без него GestureDetector внутри экранов не работает
     <GestureHandlerRootView style={styles.root}>
       <ThemeProvider>
-        <TasksProvider>
+        <AuthProvider>
           <RootStack />
-        </TasksProvider>
+        </AuthProvider>
       </ThemeProvider>
     </GestureHandlerRootView>
   );

@@ -6,6 +6,7 @@ export type TaskRouteParams = {
 // Все пути приложения в одном месте, чтобы не ошибиться в строке маршрута
 export const ROUTES = {
   home: '/',
+  login: '/login',
   settings: '/settings',
   newTask: '/task/new',
   taskDetails: '/task/[id]',

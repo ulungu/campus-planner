@@ -1,12 +1,12 @@
 import React from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
-import Screen from '../../../src/components/ui/Screen';
-import EmptyState from '../../../src/components/ui/EmptyState';
-import TaskForm from '../../../src/components/task/TaskForm';
-import { useTasks } from '../../../src/hooks/useTasks';
-import { TaskFormValues } from '../../../src/types/task';
-import { TaskRouteParams } from '../../../src/types/navigation';
-import { goBackOrHome } from '../../../src/navigation/actions';
+import Screen from '../../../../src/components/ui/Screen';
+import EmptyState from '../../../../src/components/ui/EmptyState';
+import TaskForm from '../../../../src/components/task/TaskForm';
+import { useTasks } from '../../../../src/hooks/useTasks';
+import { TaskFormValues } from '../../../../src/types/task';
+import { TaskRouteParams } from '../../../../src/types/navigation';
+import { goBackOrHome } from '../../../../src/navigation/actions';
 
 export default function EditTaskScreen() {
   const { id } = useLocalSearchParams<TaskRouteParams>();

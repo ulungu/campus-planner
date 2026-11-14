@@ -1,13 +1,13 @@
 import React from 'react';
 import { ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
-import Screen from '../../src/components/ui/Screen';
-import TaskForm from '../../src/components/task/TaskForm';
-import DraftBanner from '../../src/components/task/DraftBanner';
-import { useTasks } from '../../src/hooks/useTasks';
-import { useTaskDraft } from '../../src/hooks/useTaskDraft';
-import { useTheme } from '../../src/context/ThemeContext';
-import { TaskFormValues } from '../../src/types/task';
+import Screen from '../../../src/components/ui/Screen';
+import TaskForm from '../../../src/components/task/TaskForm';
+import DraftBanner from '../../../src/components/task/DraftBanner';
+import { useTasks } from '../../../src/hooks/useTasks';
+import { useTaskDraft } from '../../../src/hooks/useTaskDraft';
+import { useTheme } from '../../../src/context/ThemeContext';
+import { TaskFormValues } from '../../../src/types/task';
 
 export default function NewTaskScreen() {
   const { createTask } = useTasks();
