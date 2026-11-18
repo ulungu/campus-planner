@@ -5,6 +5,8 @@ import { useTheme } from '../../context/ThemeContext';
 import { ThemeColors } from '../../theme/colors';
 import { fontSize, radius, spacing } from '../../theme/spacing';
 import {
+  SUBJECT_MAX_LENGTH,
+  TITLE_MAX_LENGTH,
   TaskInputErrors,
   hasErrors,
   normalizeTaskInput,
@@ -19,6 +21,11 @@ interface TaskFormProps {
   onSubmit: (data: TaskFormValues) => void;
   onCancel: () => void;
   onChange?: (data: TaskFormValues) => void;
+  // Пока запрос в пути, кнопка заблокирована: повторный POST создал бы дубликат
+  isSubmitting?: boolean;
+  submittingLabel?: string;
+  // Ошибка сервера (400, сеть, 500) — показывается над кнопками
+  submitError?: string | null;
 }
 
 const PRIORITIES: TaskPriority[] = ['low', 'medium', 'high'];
@@ -35,6 +42,9 @@ export default function TaskForm({
   onSubmit,
   onCancel,
   onChange,
+  isSubmitting = false,
+  submittingLabel = 'Сохранение…',
+  submitError = null,
 }: TaskFormProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -49,6 +59,7 @@ export default function TaskForm({
   };
 
   const handleSubmit = () => {
+    if (isSubmitting) return;
     const normalized = normalizeTaskInput(values);
     const nextErrors = validateTaskInput(normalized);
     setErrors(nextErrors);
@@ -63,6 +74,7 @@ export default function TaskForm({
         value={values.title}
         onChangeText={(title) => update({ title })}
         placeholder="Например: Сделать домашку по матанализу"
+        maxLength={TITLE_MAX_LENGTH}
         error={errors.title}
       />
 
@@ -71,6 +83,7 @@ export default function TaskForm({
         value={values.subject}
         onChangeText={(subject) => update({ subject })}
         placeholder="Например: Математический анализ"
+        maxLength={SUBJECT_MAX_LENGTH}
         error={errors.subject}
       />
 
@@ -107,15 +120,7 @@ export default function TaskForm({
         error={errors.dueDate}
       />
 
-      <AppInput
-        label="Описание (необязательно)"
-        value={values.description ?? ''}
-        onChangeText={(description) => update({ description })}
-        placeholder="Что именно нужно сделать"
-        multiline
-        textAlignVertical="top"
-        maxLength={300}
-      />
+      {submitError ? <Text style={styles.submitError}>{submitError}</Text> : null}
 
       <View style={styles.buttonsRow}>
         <AppButton
@@ -124,7 +129,11 @@ export default function TaskForm({
           onPress={onCancel}
           style={styles.cancelButton}
         />
-        <AppButton title={submitLabel} onPress={handleSubmit} />
+        <AppButton
+          title={isSubmitting ? submittingLabel : submitLabel}
+          onPress={handleSubmit}
+          disabled={isSubmitting}
+        />
       </View>
     </View>
   );
@@ -173,6 +182,11 @@ const createStyles = (colors: ThemeColors) =>
     priorityOptionTextActive: {
       color: colors.onPrimary,
       fontWeight: '600',
+    },
+    submitError: {
+      marginTop: spacing.md,
+      fontSize: fontSize.sm,
+      color: colors.danger,
     },
     buttonsRow: {
       flexDirection: 'row',

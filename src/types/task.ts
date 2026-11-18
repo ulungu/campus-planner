@@ -1,3 +1,4 @@
+// Типы на границе клиента и Campus API (раздел 3 API.md)
 export type TaskStatus = 'active' | 'completed';
 export type TaskPriority = 'low' | 'medium' | 'high';
 
@@ -7,16 +8,43 @@ export interface Task {
   subject: string;
   priority: TaskPriority;
   status: TaskStatus;
+  // Сервер всегда присылает поле: дата YYYY-MM-DD или null, если срока нет
+  dueDate: string | null;
   createdAt: string;
-  dueDate?: string;
-  description?: string;
+  updatedAt: string;
 }
 
-export type CreateTaskInput = Omit<Task, 'id' | 'createdAt' | 'status'>;
-export type UpdateTaskInput = Partial<CreateTaskInput> & { status?: TaskStatus };
+export interface CreateTaskInput {
+  title: string;
+  subject: string;
+  priority: TaskPriority;
+  status?: TaskStatus;
+  dueDate?: string | null;
+}
 
-// Значения формы совпадают с данными для создания задачи
-export type TaskFormValues = CreateTaskInput;
+// В PATCH отсутствие поля — «оставить как было», dueDate: null — убрать срок
+export type UpdateTaskInput = Partial<CreateTaskInput>;
+
+export interface TaskListParams {
+  status?: TaskStatus;
+  q?: string;
+}
+
+export interface TaskListResponse {
+  items: Task[];
+}
+
+export interface TaskResponse {
+  item: Task;
+}
+
+// Значения формы: пустой срок в форме — отсутствие поля, а не null
+export interface TaskFormValues {
+  title: string;
+  subject: string;
+  priority: TaskPriority;
+  dueDate?: string;
+}
 
 // Фильтр списка: конкретный статус или все задачи
 export type TaskStatusFilter = TaskStatus | 'all';

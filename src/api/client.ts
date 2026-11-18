@@ -21,6 +21,10 @@ export function isUnauthorized(error: unknown): boolean {
   return error instanceof ApiError && error.status === 401;
 }
 
+export function isNotFound(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 404;
+}
+
 export function isNetworkError(error: unknown): boolean {
   return error instanceof ApiError && error.status === NETWORK_ERROR_STATUS;
 }
@@ -89,4 +93,16 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}): Promi
   }
 
   return (await response.json()) as T;
+}
+
+// Защищённый запрос: тот же apiRequest, но с заголовком Authorization.
+// Токен передаёт вызывающий код — модуль не хранит сессию сам
+export function authorizedRequest<T>(
+  path: string,
+  token: string,
+  init: RequestInit = {}
+): Promise<T> {
+  const headers = new Headers(init.headers);
+  headers.set('Authorization', `Bearer ${token}`);
+  return apiRequest<T>(path, { ...init, headers });
 }

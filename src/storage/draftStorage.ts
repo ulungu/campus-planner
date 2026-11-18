@@ -12,8 +12,7 @@ function isTaskFormValues(value: unknown): value is TaskFormValues {
     typeof draft.title === 'string' &&
     typeof draft.subject === 'string' &&
     PRIORITIES.includes(draft.priority as TaskPriority) &&
-    (draft.dueDate === undefined || typeof draft.dueDate === 'string') &&
-    (draft.description === undefined || typeof draft.description === 'string')
+    (draft.dueDate === undefined || typeof draft.dueDate === 'string')
   );
 }
 
@@ -21,8 +20,7 @@ export function isDraftEmpty(draft: TaskFormValues): boolean {
   return (
     !draft.title.trim() &&
     !draft.subject.trim() &&
-    !draft.dueDate?.trim() &&
-    !draft.description?.trim()
+    !draft.dueDate?.trim()
   );
 }
 

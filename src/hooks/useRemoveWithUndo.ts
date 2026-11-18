@@ -1,20 +1,28 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert } from 'react-native';
+import { getErrorMessage, isUnauthorized } from '../api/client';
+import { useCreateTask, useDeleteTask } from '../features/tasks/useTaskMutations';
 import { Task } from '../types/task';
-import { useTasks } from './useTasks';
 
 // Сколько миллисекунд доступна кнопка «Отменить» после удаления
 export const UNDO_TIMEOUT = 5000;
 
 export interface RemovedTask {
   task: Task;
-  // Позиция в общем списке, чтобы вернуть задачу на прежнее место
-  index: number;
   key: number;
 }
 
-export function useRemoveWithUndo() {
-  const { tasks, removeTask, restoreTask } = useTasks();
+function showError(title: string, error: unknown) {
+  // При 401 приложение само выходит из сессии — сообщение не нужно
+  if (!isUnauthorized(error)) Alert.alert(title, getErrorMessage(error));
+}
+
+// Удаление с подтверждением (ЛР №5) поверх серверных мутаций.
+// Задача удаляется на сервере сразу (DELETE), а «Отменить» создаёт её заново
+// с теми же полями (POST) — у восстановленной задачи будет новый id
+export function useRemoveWithUndo(tasks: readonly Task[]) {
+  const deleteMutation = useDeleteTask();
+  const createMutation = useCreateTask();
   const [lastRemoved, setLastRemoved] = useState<RemovedTask | null>(null);
   const removalCounter = useRef(0);
 
@@ -23,36 +31,37 @@ export function useRemoveWithUndo() {
     tasksRef.current = tasks;
   }, [tasks]);
 
-  // Через UNDO_TIMEOUT плашка скрывается; новое удаление перезапускает таймер
   useEffect(() => {
     if (!lastRemoved) return;
     const timer = setTimeout(() => setLastRemoved(null), UNDO_TIMEOUT);
     return () => clearTimeout(timer);
   }, [lastRemoved]);
 
+  const { mutateAsync: deleteAsync } = deleteMutation;
+
   const remove = useCallback(
-    (id: string) => {
-      const current = tasksRef.current;
-      const index = current.findIndex((task) => task.id === id);
-      if (index === -1) return;
-      removeTask(id);
-      removalCounter.current += 1;
-      setLastRemoved({ task: current[index], index, key: removalCounter.current });
+    async (task: Task) => {
+      try {
+        await deleteAsync(task.id);
+        removalCounter.current += 1;
+        setLastRemoved({ task, key: removalCounter.current });
+      } catch (error) {
+        showError('Не удалось удалить задачу', error);
+      }
     },
-    [removeTask]
+    [deleteAsync]
   );
 
-  // Запись не удаляется сразу: сначала пользователь подтверждает действие
   const confirmRemove = useCallback(
     (id: string) => {
       const task = tasksRef.current.find((item) => item.id === id);
       if (!task) return;
       Alert.alert(
         'Удалить задачу?',
-        `«${task.title}» будет удалена из списка.`,
+        `«${task.title}» будет удалена.`,
         [
           { text: 'Отмена', style: 'cancel' },
-          { text: 'Удалить', style: 'destructive', onPress: () => remove(id) },
+          { text: 'Удалить', style: 'destructive', onPress: () => void remove(task) },
         ],
         { cancelable: true }
       );
@@ -60,11 +69,24 @@ export function useRemoveWithUndo() {
     [remove]
   );
 
-  const undo = useCallback(() => {
-    if (!lastRemoved) return;
-    restoreTask(lastRemoved.task, lastRemoved.index);
-    setLastRemoved(null);
-  }, [lastRemoved, restoreTask]);
+  const { mutateAsync: createAsync, isPending: isRestoring } = createMutation;
 
-  return { lastRemoved, confirmRemove, undo };
+  const undo = useCallback(async () => {
+    if (!lastRemoved || isRestoring) return;
+    const { task } = lastRemoved;
+    setLastRemoved(null);
+    try {
+      await createAsync({
+        title: task.title,
+        subject: task.subject,
+        priority: task.priority,
+        status: task.status,
+        dueDate: task.dueDate,
+      });
+    } catch (error) {
+      showError('Не удалось восстановить задачу', error);
+    }
+  }, [lastRemoved, isRestoring, createAsync]);
+
+  return { lastRemoved, confirmRemove, undo, removingIds: deleteMutation.pendingIds };
 }

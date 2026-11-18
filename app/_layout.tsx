@@ -3,6 +3,8 @@ import { ActivityIndicator, View, StyleSheet } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from '../src/api/queryClient';
 import { ThemeProvider, useTheme } from '../src/context/ThemeContext';
 import { LOADING_COLORS } from '../src/theme/colors';
 import { AuthProvider } from '../src/auth/AuthContext';
@@ -47,11 +49,14 @@ export default function RootLayout() {
   return (
     // Корневой контейнер жестов: без него GestureDetector внутри экранов не работает
     <GestureHandlerRootView style={styles.root}>
-      <ThemeProvider>
-        <AuthProvider>
-          <RootStack />
-        </AuthProvider>
-      </ThemeProvider>
+      {/* QueryClient создан один раз в модуле src/api/queryClient.ts */}
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
+          <AuthProvider>
+            <RootStack />
+          </AuthProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
     </GestureHandlerRootView>
   );
 }

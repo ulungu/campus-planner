@@ -1,11 +1,13 @@
 import React, { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import Screen from '../../../src/components/ui/Screen';
 import AppButton from '../../../src/components/ui/AppButton';
 import EmptyState from '../../../src/components/ui/EmptyState';
 import PriorityBadge from '../../../src/components/task/PriorityBadge';
-import { useTasks } from '../../../src/hooks/useTasks';
+import { getErrorMessage, isNotFound, isUnauthorized } from '../../../src/api/client';
+import { useTaskQuery } from '../../../src/features/tasks/useTasksQuery';
+import { useDeleteTask, useToggleTaskStatus } from '../../../src/features/tasks/useTaskMutations';
 import { useTheme } from '../../../src/context/ThemeContext';
 import { ThemeColors } from '../../../src/theme/colors';
 import { fontSize, radius, spacing } from '../../../src/theme/spacing';
@@ -16,38 +18,81 @@ import { goBackOrHome, openEditTask } from '../../../src/navigation/actions';
 
 export default function TaskDetailsScreen() {
   const { id } = useLocalSearchParams<TaskRouteParams>();
-  const { getTaskById, toggleTaskStatus } = useTasks();
+  const taskQuery = useTaskQuery(id);
+  const { toggle, pendingIds: togglingIds } = useToggleTaskStatus();
+  const deleteMutation = useDeleteTask();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
-  const task = id ? getTaskById(id) : undefined;
+  const notFound = (
+    <Screen>
+      <EmptyState
+        title="Задача не найдена"
+        description="Возможно, она уже удалена"
+        actionLabel="К списку задач"
+        onAction={goBackOrHome}
+      />
+    </Screen>
+  );
 
-  if (!task) {
+  if (!id) return notFound;
+
+  if (taskQuery.isPending) {
+    return (
+      <Screen centered>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </Screen>
+    );
+  }
+
+  if (taskQuery.isError && !taskQuery.data) {
+    // 404 — записи нет или она чужая; остальное — ошибка запроса с повтором
+    if (isNotFound(taskQuery.error)) return notFound;
     return (
       <Screen>
         <EmptyState
-          title="Задача не найдена"
-          actionLabel="К списку задач"
-          onAction={goBackOrHome}
+          icon="⚠️"
+          title="Не удалось загрузить задачу"
+          description={getErrorMessage(taskQuery.error)}
+          actionLabel={taskQuery.isFetching ? 'Загрузка…' : 'Повторить'}
+          onAction={() => void taskQuery.refetch()}
         />
       </Screen>
     );
   }
 
+  const task = taskQuery.data;
+  if (!task) return notFound;
+
   const overdue = isOverdue(task);
+  const isToggling = togglingIds.includes(task.id);
+  const isDeleting = deleteMutation.isPending;
+  const isBusy = isToggling || isDeleting;
+
+  const handleDelete = () => {
+    Alert.alert('Удалить задачу?', `«${task.title}» будет удалена.`, [
+      { text: 'Отмена', style: 'cancel' },
+      {
+        text: 'Удалить',
+        style: 'destructive',
+        onPress: () =>
+          deleteMutation.mutate(task.id, {
+            onSuccess: goBackOrHome,
+            onError: (error) => {
+              if (!isUnauthorized(error)) {
+                Alert.alert('Не удалось удалить задачу', getErrorMessage(error));
+              }
+            },
+          }),
+      },
+    ]);
+  };
 
   return (
     <Screen scroll padding="md">
       <View style={styles.card}>
         <Text style={styles.label}>Название</Text>
         <Text style={styles.title}>{task.title}</Text>
-
-        {task.description ? (
-          <>
-            <Text style={styles.label}>Описание</Text>
-            <Text style={styles.value}>{task.description}</Text>
-          </>
-        ) : null}
 
         <Text style={styles.label}>Предмет</Text>
         <Text style={styles.value}>{task.subject}</Text>
@@ -66,14 +111,29 @@ export default function TaskDetailsScreen() {
       </View>
 
       <AppButton
-        title={task.status === 'completed' ? 'Вернуть в работу' : 'Отметить выполненной'}
+        title={
+          isToggling
+            ? 'Сохранение…'
+            : task.status === 'completed'
+              ? 'Вернуть в работу'
+              : 'Отметить выполненной'
+        }
         variant="secondary"
-        onPress={() => toggleTaskStatus(task.id)}
+        onPress={() => toggle(task)}
+        disabled={isBusy}
         style={styles.firstButton}
       />
       <AppButton
         title="Редактировать"
         onPress={() => openEditTask(task.id)}
+        disabled={isBusy}
+        style={styles.nextButton}
+      />
+      <AppButton
+        title={isDeleting ? 'Удаление…' : 'Удалить'}
+        variant="ghost"
+        onPress={handleDelete}
+        disabled={isBusy}
         style={styles.nextButton}
       />
     </Screen>

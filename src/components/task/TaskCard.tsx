@@ -30,6 +30,9 @@ interface TaskCardProps {
   onToggleStatus: (id: string) => void;
   onEdit: (id: string) => void;
   onRemove: (id: string) => void;
+  // Для задачи выполняется запрос: текст «Сохранение…» / «Удаление…»
+  // показывается вместо статуса, действия заблокированы
+  busyLabel?: string | null;
 }
 
 const STATUS_DURATION = 250;
@@ -44,7 +47,9 @@ export default function TaskCard({
   onToggleStatus,
   onEdit,
   onRemove,
+  busyLabel = null,
 }: TaskCardProps) {
+  const isBusy = Boolean(busyLabel);
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [expanded, setExpanded] = useState(false);
@@ -134,9 +139,10 @@ export default function TaskCard({
       <View style={styles.row}>
         <Pressable
           onPress={() => onToggleStatus(task.id)}
+          disabled={isBusy}
           hitSlop={spacing.xs}
           accessibilityRole="checkbox"
-          accessibilityState={{ checked: isCompleted }}
+          accessibilityState={{ checked: isCompleted, disabled: isBusy }}
         >
           <Animated.View style={[styles.checkbox, checkboxStyle]}>
             <Animated.Text style={[styles.checkboxMark, checkmarkStyle]}>
@@ -155,7 +161,9 @@ export default function TaskCard({
 
           <View style={styles.metaRow}>
             <PriorityBadge priority={task.priority} />
-            <Text style={styles.status}>{STATUS_LABELS[task.status]}</Text>
+            <Text style={styles.status}>
+              {busyLabel ?? STATUS_LABELS[task.status]}
+            </Text>
             <Pressable
               style={styles.moreButton}
               onPress={() => setExpanded((value) => !value)}
@@ -176,6 +184,7 @@ export default function TaskCard({
         <Pressable
           style={styles.iconButton}
           onPress={() => onRemove(task.id)}
+          disabled={isBusy}
           hitSlop={spacing.xs}
           accessibilityRole="button"
           accessibilityLabel="Удалить задачу"
@@ -190,11 +199,6 @@ export default function TaskCard({
           exiting={FadeOut.duration(EXPAND_DURATION / 2)}
           style={styles.details}
         >
-          <Text style={styles.detailsLabel}>Описание</Text>
-          <Text style={styles.detailsValue}>
-            {task.description ?? 'Описание не добавлено'}
-          </Text>
-
           <Text style={styles.detailsLabel}>Срок</Text>
           <Text style={[styles.detailsValue, overdue && styles.overdue]}>
             {task.dueDate ? formatDueDate(task.dueDate) : 'Не указан'}
@@ -211,7 +215,11 @@ export default function TaskCard({
             <Pressable onPress={() => onEdit(task.id)} hitSlop={spacing.xs}>
               <Text style={styles.actionText}>Редактировать</Text>
             </Pressable>
-            <Pressable onPress={() => onToggleStatus(task.id)} hitSlop={spacing.xs}>
+            <Pressable
+              onPress={() => onToggleStatus(task.id)}
+              disabled={isBusy}
+              hitSlop={spacing.xs}
+            >
               <Text style={styles.actionText}>
                 {isCompleted ? 'Вернуть в работу' : 'Выполнить'}
               </Text>

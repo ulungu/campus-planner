@@ -2,6 +2,7 @@
 import {
   CreateTaskInput,
   Task,
+  TaskFormValues,
   TaskCounts,
   TaskFilterOptions,
   TaskPriority,
@@ -98,28 +99,7 @@ export function formatDueDate(dueDate: string): string {
   return `${day}.${month}.${year}`;
 }
 
-// ---------- Операции над списком (используются контекстом) ----------
-
-export function buildTask(
-  input: CreateTaskInput,
-  now: Date = new Date(),
-  id: string = String(now.getTime())
-): Task {
-  return {
-    ...input,
-    id,
-    status: 'active',
-    createdAt: now.toISOString(),
-  };
-}
-
-export function applyTaskUpdate(task: Task, input: UpdateTaskInput): Task {
-  const updated: Task = { ...task, ...input };
-  // Пустой срок означает «срок не задан», пустое описание — «описания нет»
-  if (!updated.dueDate) delete updated.dueDate;
-  if (!updated.description) delete updated.description;
-  return updated;
-}
+// ---------- Статус ----------
 
 export function toggleStatus(status: TaskStatus): TaskStatus {
   return status === 'completed' ? 'active' : 'completed';
@@ -127,12 +107,24 @@ export function toggleStatus(status: TaskStatus): TaskStatus {
 
 // ---------- Проверка данных формы ----------
 
-export type TaskInputErrors = Partial<Record<keyof CreateTaskInput, string>>;
+export type TaskInputErrors = Partial<Record<keyof TaskFormValues, string>>;
 
-export function validateTaskInput(input: CreateTaskInput): TaskInputErrors {
+// Лимиты сервера (API.md, раздел 3): длина считается как string.length после trim()
+export const TITLE_MAX_LENGTH = 120;
+export const SUBJECT_MAX_LENGTH = 80;
+
+export function validateTaskInput(input: TaskFormValues): TaskInputErrors {
   const errors: TaskInputErrors = {};
-  if (!input.title.trim()) errors.title = 'Введите название задачи';
-  if (!input.subject.trim()) errors.subject = 'Введите предмет';
+  const title = input.title.trim();
+  const subject = input.subject.trim();
+  if (!title) errors.title = 'Введите название задачи';
+  else if (title.length > TITLE_MAX_LENGTH) {
+    errors.title = `Не длиннее ${TITLE_MAX_LENGTH} символов`;
+  }
+  if (!subject) errors.subject = 'Введите предмет';
+  else if (subject.length > SUBJECT_MAX_LENGTH) {
+    errors.subject = `Не длиннее ${SUBJECT_MAX_LENGTH} символов`;
+  }
   if (input.dueDate && !isValidDueDate(input.dueDate)) {
     errors.dueDate = 'Дата в формате ГГГГ-ММ-ДД, например 2026-12-31';
   }
@@ -143,15 +135,47 @@ export function hasErrors(errors: TaskInputErrors): boolean {
   return Object.keys(errors).length > 0;
 }
 
-// Обрезает пробелы и убирает пустые срок и описание
-export function normalizeTaskInput(input: CreateTaskInput): CreateTaskInput {
+// Обрезает пробелы и убирает пустой срок
+export function normalizeTaskInput(input: TaskFormValues): TaskFormValues {
   const dueDate = input.dueDate?.trim();
-  const description = input.description?.trim();
   return {
     title: input.title.trim(),
     subject: input.subject.trim(),
     priority: input.priority,
     ...(dueDate ? { dueDate } : {}),
-    ...(description ? { description } : {}),
+  };
+}
+
+// ---------- Форма → тело запроса ----------
+
+// POST: без срока поле не передаём, сервер поставит null
+export function toCreateInput(values: TaskFormValues): CreateTaskInput {
+  const normalized = normalizeTaskInput(values);
+  return {
+    title: normalized.title,
+    subject: normalized.subject,
+    priority: normalized.priority,
+    ...(normalized.dueDate ? { dueDate: normalized.dueDate } : {}),
+  };
+}
+
+// PATCH: очищенный в форме срок нужно явно удалить на сервере через null
+export function toUpdateInput(values: TaskFormValues): UpdateTaskInput {
+  const normalized = normalizeTaskInput(values);
+  return {
+    title: normalized.title,
+    subject: normalized.subject,
+    priority: normalized.priority,
+    dueDate: normalized.dueDate ?? null,
+  };
+}
+
+// Значения формы из серверной задачи (null-срок → пустое поле)
+export function toFormValues(task: Task): TaskFormValues {
+  return {
+    title: task.title,
+    subject: task.subject,
+    priority: task.priority,
+    ...(task.dueDate ? { dueDate: task.dueDate } : {}),
   };
 }

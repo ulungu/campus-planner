@@ -1,7 +1,7 @@
-import React, { createContext, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { createContext, useCallback, useEffect, useMemo, useState } from 'react';
 import * as authApi from '../api/auth';
-import { authorizedFetch as authorizedFetchWithToken } from '../api/authorizedFetch';
-import { ApiError, getErrorMessage, isUnauthorized } from '../api/client';
+import { getErrorMessage, isUnauthorized } from '../api/client';
+import { queryClient, setUnauthorizedHandler } from '../api/queryClient';
 import { LoginInput, User } from '../types/auth';
 import { clearDraft } from '../storage/draftStorage';
 import { readToken, removeToken, saveToken } from './authStorage';
@@ -19,8 +19,6 @@ export interface AuthContextValue {
   retryRestore: () => void;
   signIn: (credentials: LoginInput) => Promise<void>;
   signOut: () => Promise<void>;
-  // Защищённый запрос от имени текущего пользователя; при 401 завершает сессию
-  authorizedFetch: <T>(path: string, init?: RequestInit) => Promise<T>;
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
@@ -32,12 +30,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [restoreError, setRestoreError] = useState<string | null>(null);
   // Увеличивается, чтобы перезапустить восстановление сессии кнопкой «Повторить»
   const [restoreAttempt, setRestoreAttempt] = useState(0);
-
-  // Актуальный токен для authorizedFetch без пересоздания функции
-  const tokenRef = useRef<string | null>(null);
-  useEffect(() => {
-    tokenRef.current = accessToken;
-  }, [accessToken]);
 
   // Восстановление сессии при запуске: токен из SecureStore → проверка через /auth/me
   useEffect(() => {
@@ -87,6 +79,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signIn = useCallback(async (credentials: LoginInput) => {
     const response = await authApi.signIn(credentials);
     await saveToken(response.accessToken);
+    // Новый вход — кэш предыдущей сессии не должен попасть на экран
+    queryClient.clear();
     setRestoreError(null);
     setAccessToken(response.accessToken);
     setUser(response.user);
@@ -99,26 +93,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setAccessToken(null);
     setUser(null);
     setRestoreError(null);
+    // Задачи пользователя в кэше TanStack Query больше не нужны никому
+    queryClient.clear();
   }, []);
 
-  const authorizedFetch = useCallback(
-    async <T,>(path: string, init?: RequestInit): Promise<T> => {
-      const token = tokenRef.current;
-      if (!token) {
-        throw new ApiError(401, 'Требуется авторизация.');
-      }
-      try {
-        return await authorizedFetchWithToken<T>(path, token, init);
-      } catch (error) {
-        // Из сессии выходим только при 401. Сеть и 500 токен не отменяют
-        if (isUnauthorized(error)) {
-          await signOut();
-        }
-        throw error;
-      }
-    },
-    [signOut]
-  );
+  // 401 любого запроса задач (QueryCache/MutationCache) завершает сессию;
+  // Stack.Protected в корневом layout сам откроет экран входа
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      void signOut();
+    });
+    return () => setUnauthorizedHandler(null);
+  }, [signOut]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
@@ -130,9 +116,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       retryRestore,
       signIn,
       signOut,
-      authorizedFetch,
     }),
-    [user, accessToken, isLoading, restoreError, retryRestore, signIn, signOut, authorizedFetch]
+    [user, accessToken, isLoading, restoreError, retryRestore, signIn, signOut]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
