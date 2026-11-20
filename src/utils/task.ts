@@ -6,6 +6,7 @@ import {
   TaskCounts,
   TaskFilterOptions,
   TaskPriority,
+  TaskSort,
   TaskStatus,
   TaskStatusFilter,
   UpdateTaskInput,
@@ -37,6 +38,34 @@ export function sortByPriority(tasks: readonly Task[]): Task[] {
   return [...tasks].sort(
     (a, b) => PRIORITY_WEIGHT[b.priority] - PRIORITY_WEIGHT[a.priority]
   );
+}
+
+function compareDueDate(a: Task, b: Task): number {
+  if (a.dueDate === b.dueDate) return 0;
+  // Задачи без срока — в конце списка
+  if (!a.dueDate) return 1;
+  if (!b.dueDate) return -1;
+  // YYYY-MM-DD сравнивается как строка в хронологическом порядке
+  return a.dueDate < b.dueDate ? -1 : 1;
+}
+
+// По сроку: сначала активные задачи от ближайшего (и просроченного) дедлайна,
+// без срока — после них, выполненные — в самом конце; при равном сроке выше приоритет
+export function sortByDueDate(tasks: readonly Task[]): Task[] {
+  return [...tasks].sort((a, b) => {
+    const byStatus = Number(a.status === 'completed') - Number(b.status === 'completed');
+    if (byStatus !== 0) return byStatus;
+    return (
+      compareDueDate(a, b) || PRIORITY_WEIGHT[b.priority] - PRIORITY_WEIGHT[a.priority]
+    );
+  });
+}
+
+// Сервер отдаёт список от новых к старым, поэтому 'created' — исходный порядок
+export function sortTasks(tasks: readonly Task[], sort: TaskSort): Task[] {
+  if (sort === 'dueDate') return sortByDueDate(tasks);
+  if (sort === 'priority') return sortByPriority(tasks);
+  return [...tasks];
 }
 
 // ---------- Фильтрация ----------
@@ -90,6 +119,39 @@ export function isOverdue(task: Task, now: Date = new Date()): boolean {
   if (task.status === 'completed' || !task.dueDate) return false;
   if (!isValidDueDate(task.dueDate)) return false;
   return task.dueDate < toDateKey(now);
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+// Срок ближе этого числа дней подсвечивается как «скоро»
+const SOON_DAYS = 3;
+
+// Сколько календарных дней осталось до срока: 0 — сегодня, отрицательное — просрочено
+export function daysUntil(dueDate: string, now: Date = new Date()): number | null {
+  if (!isValidDueDate(dueDate)) return null;
+  const [year, month, day] = dueDate.split('-').map(Number);
+  // Обе даты в UTC-полночь: переход на летнее время не сдвигает разницу
+  const due = Date.UTC(year, month - 1, day);
+  const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  return Math.round((due - today) / DAY_MS);
+}
+
+export type DueDateTone = 'overdue' | 'soon' | 'later';
+
+export interface DueDateHint {
+  text: string;
+  tone: DueDateTone;
+}
+
+// Подсказка на карточке: «Сегодня», «Завтра», «Через 5 дн.», «Просрочено на 2 дн.».
+// Для выполненных задач и задач без срока подсказки нет
+export function describeDueDate(task: Task, now: Date = new Date()): DueDateHint | null {
+  if (task.status === 'completed' || !task.dueDate) return null;
+  const days = daysUntil(task.dueDate, now);
+  if (days === null) return null;
+  if (days < 0) return { text: `Просрочено на ${-days} дн.`, tone: 'overdue' };
+  if (days === 0) return { text: 'Сегодня', tone: 'soon' };
+  if (days === 1) return { text: 'Завтра', tone: 'soon' };
+  return { text: `Через ${days} дн.`, tone: days <= SOON_DAYS ? 'soon' : 'later' };
 }
 
 // 2026-10-05 -> 05.10.2026

@@ -7,6 +7,7 @@ import SwipeableTaskCard from '../../src/components/task/SwipeableTaskCard';
 import UndoBar from '../../src/components/task/UndoBar';
 import TaskProgressBar from '../../src/components/task/TaskProgressBar';
 import StatusFilter from '../../src/components/task/StatusFilter';
+import SortSelector from '../../src/components/task/SortSelector';
 import Screen from '../../src/components/ui/Screen';
 import AppButton from '../../src/components/ui/AppButton';
 import AppInput from '../../src/components/ui/AppInput';
@@ -23,7 +24,7 @@ import { useTheme } from '../../src/context/ThemeContext';
 import { ThemeColors } from '../../src/theme/colors';
 import { fontSize, radius, spacing } from '../../src/theme/spacing';
 import { Task, TaskStatusFilter } from '../../src/types/task';
-import { countTasks } from '../../src/utils/task';
+import { countTasks, sortTasks } from '../../src/utils/task';
 import { openEditTask, openNewTask, openSettings, openTask } from '../../src/navigation/actions';
 
 const NO_TASKS: Task[] = [];
@@ -35,14 +36,17 @@ const EMPTY_TITLES: Record<TaskStatusFilter, string> = {
 };
 
 export default function TaskListScreen() {
-  const { statusFilter, setStatusFilter, lastCreatedId, clearLastCreated } = useTasksUi();
+  const { statusFilter, setStatusFilter, sort, setSort, lastCreatedId, clearLastCreated } =
+    useTasksUi();
   // Список с серверным фильтром и полный список для прогресса.
   // При фильтре «Все» это одна и та же запись кэша и один запрос
   const listQuery = useTasksQuery(statusFilter);
   const allQuery = useTasksQuery('all');
   const tasks = listQuery.data ?? NO_TASKS;
 
-  const { query, setQuery, visibleTasks, isSearching } = useTaskSearch(tasks);
+  const { query, setQuery, visibleTasks: foundTasks, isSearching } = useTaskSearch(tasks);
+  // Сортировка — на клиенте поверх серверного фильтра и локального поиска
+  const visibleTasks = useMemo(() => sortTasks(foundTasks, sort), [foundTasks, sort]);
   const counts = useMemo(() => countTasks(allQuery.data ?? NO_TASKS), [allQuery.data]);
 
   const { toggle, pendingIds: togglingIds } = useToggleTaskStatus();
@@ -162,6 +166,7 @@ export default function TaskListScreen() {
       </View>
 
       <StatusFilter value={statusFilter} onChange={setStatusFilter} />
+      <SortSelector value={sort} onChange={setSort} />
 
       <AppButton
         title="+ Добавить задачу"

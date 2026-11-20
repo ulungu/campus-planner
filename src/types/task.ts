@@ -49,6 +49,16 @@ export interface TaskFormValues {
 // Фильтр списка: конкретный статус или все задачи
 export type TaskStatusFilter = TaskStatus | 'all';
 
+// Порядок списка (собственная функция ЛР №8): как пришло с сервера — новые сверху,
+// по ближайшему сроку или по приоритету
+export type TaskSort = 'created' | 'dueDate' | 'priority';
+
+export const SORT_LABELS: Record<TaskSort, string> = {
+  created: 'Новые',
+  dueDate: 'По сроку',
+  priority: 'По приоритету',
+};
+
 export interface TaskFilterOptions {
   status: TaskStatusFilter;
   query: string;

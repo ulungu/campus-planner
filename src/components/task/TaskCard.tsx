@@ -18,7 +18,7 @@ import { Task, STATUS_LABELS } from '../../types/task';
 import { useTheme } from '../../context/ThemeContext';
 import { ThemeColors } from '../../theme/colors';
 import { fontSize, radius, spacing } from '../../theme/spacing';
-import { formatDueDate, isOverdue } from '../../utils/task';
+import { describeDueDate, formatDueDate, isOverdue } from '../../utils/task';
 import PriorityBadge from './PriorityBadge';
 
 interface TaskCardProps {
@@ -55,6 +55,7 @@ export default function TaskCard({
   const [expanded, setExpanded] = useState(false);
   const isCompleted = task.status === 'completed';
   const overdue = isOverdue(task);
+  const dueHint = describeDueDate(task);
 
   // 0 — задача активна, 1 — выполнена
   const statusProgress = useSharedValue(isCompleted ? 1 : 0);
@@ -164,6 +165,11 @@ export default function TaskCard({
             <Text style={styles.status}>
               {busyLabel ?? STATUS_LABELS[task.status]}
             </Text>
+            {dueHint ? (
+              <Text style={[styles.dueHint, styles[`due_${dueHint.tone}`]]}>
+                {dueHint.text}
+              </Text>
+            ) : null}
             <Pressable
               style={styles.moreButton}
               onPress={() => setExpanded((value) => !value)}
@@ -282,6 +288,20 @@ const createStyles = (colors: ThemeColors) =>
     status: {
       fontSize: fontSize.xs + 1,
       color: colors.textSecondary,
+    },
+    dueHint: {
+      fontSize: fontSize.xs + 1,
+      fontWeight: '600',
+    },
+    due_overdue: {
+      color: colors.danger,
+    },
+    due_soon: {
+      color: colors.priority.medium,
+    },
+    due_later: {
+      color: colors.textSecondary,
+      fontWeight: '400',
     },
     overdue: {
       color: colors.danger,
