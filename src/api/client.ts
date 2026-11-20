@@ -29,10 +29,26 @@ export function isNetworkError(error: unknown): boolean {
   return error instanceof ApiError && error.status === NETWORK_ERROR_STATUS;
 }
 
-// Понятный текст для интерфейса из любой ошибки
+// Понятный текст для интерфейса. Сообщение сервера (`ApiError.message`) на экран
+// не выводится: оно техническое («Поле title должно быть строкой.»), поэтому
+// текст выбирается по HTTP-статусу. Исключение — статус 0: его текст пишет
+// сам клиент (нет сети, не задан адрес сервера)
 export function getErrorMessage(error: unknown): string {
-  if (error instanceof ApiError) return error.message;
-  return 'Что-то пошло не так. Попробуйте ещё раз.';
+  if (!(error instanceof ApiError)) return 'Что-то пошло не так. Попробуйте ещё раз.';
+  const { status } = error;
+  if (status === NETWORK_ERROR_STATUS) return error.message;
+  if (status === 400) return 'Проверьте введённые данные и попробуйте снова.';
+  if (status === 401) return 'Сессия истекла. Войдите снова.';
+  if (status === 403) return 'Нет доступа к этой записи.';
+  if (status === 404) return 'Запись не найдена. Возможно, она уже удалена.';
+  if (status >= 500) return 'Сервер временно недоступен. Попробуйте позже.';
+  return 'Не удалось выполнить запрос. Попробуйте ещё раз.';
+}
+
+// Ошибка экрана входа: здесь 401 означает неверную пару логин–пароль
+export function getLoginErrorMessage(error: unknown): string {
+  if (isUnauthorized(error)) return 'Неверный логин или пароль.';
+  return getErrorMessage(error);
 }
 
 function isApiErrorResponse(value: unknown): value is ApiErrorResponse {

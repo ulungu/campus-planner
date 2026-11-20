@@ -1,9 +1,11 @@
 import React, { useMemo } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import Screen from '../../../src/components/ui/Screen';
 import AppButton from '../../../src/components/ui/AppButton';
-import EmptyState from '../../../src/components/ui/EmptyState';
+import LoadingState from '../../../src/components/ui/LoadingState';
+import ErrorState from '../../../src/components/ui/ErrorState';
+import TaskNotFound from '../../../src/components/task/TaskNotFound';
 import PriorityBadge from '../../../src/components/task/PriorityBadge';
 import { getErrorMessage, isNotFound, isUnauthorized } from '../../../src/api/client';
 import { useTaskQuery } from '../../../src/features/tasks/useTasksQuery';
@@ -24,45 +26,25 @@ export default function TaskDetailsScreen() {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
-  const notFound = (
-    <Screen>
-      <EmptyState
-        title="Задача не найдена"
-        description="Возможно, она уже удалена"
-        actionLabel="К списку задач"
-        onAction={goBackOrHome}
-      />
-    </Screen>
-  );
+  if (!id) return <TaskNotFound />;
 
-  if (!id) return notFound;
-
-  if (taskQuery.isPending) {
-    return (
-      <Screen centered>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </Screen>
-    );
-  }
+  if (taskQuery.isPending) return <LoadingState />;
 
   if (taskQuery.isError && !taskQuery.data) {
     // 404 — записи нет или она чужая; остальное — ошибка запроса с повтором
-    if (isNotFound(taskQuery.error)) return notFound;
+    if (isNotFound(taskQuery.error)) return <TaskNotFound />;
     return (
-      <Screen>
-        <EmptyState
-          icon="⚠️"
-          title="Не удалось загрузить задачу"
-          description={getErrorMessage(taskQuery.error)}
-          actionLabel={taskQuery.isFetching ? 'Загрузка…' : 'Повторить'}
-          onAction={() => void taskQuery.refetch()}
-        />
-      </Screen>
+      <ErrorState
+        title="Не удалось загрузить задачу"
+        error={taskQuery.error}
+        onRetry={() => void taskQuery.refetch()}
+        isRetrying={taskQuery.isFetching}
+      />
     );
   }
 
   const task = taskQuery.data;
-  if (!task) return notFound;
+  if (!task) return <TaskNotFound />;
 
   const overdue = isOverdue(task);
   const isToggling = togglingIds.includes(task.id);

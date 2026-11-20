@@ -5,7 +5,7 @@ import AppInput from '../../src/components/ui/AppInput';
 import AppButton from '../../src/components/ui/AppButton';
 import { useAuth } from '../../src/hooks/useAuth';
 import { useTheme } from '../../src/context/ThemeContext';
-import { getErrorMessage } from '../../src/api/client';
+import { getLoginErrorMessage } from '../../src/api/client';
 import { ThemeColors } from '../../src/theme/colors';
 import { fontSize, radius, spacing } from '../../src/theme/spacing';
 
@@ -48,8 +48,8 @@ export default function LoginScreen() {
       await signIn({ login, password });
       // После успешного входа корневой layout сам откроет раздел (app)
     } catch (error) {
-      // 401 → «Неверный логин или пароль.», нет сети → понятный текст из ApiError
-      setSubmitError(getErrorMessage(error));
+      // 401 → «Неверный логин или пароль.», нет сети → понятный текст без деталей сервера
+      setSubmitError(getLoginErrorMessage(error));
       // Пароль после отправки не держим в состоянии экрана
       setPassword('');
     } finally {

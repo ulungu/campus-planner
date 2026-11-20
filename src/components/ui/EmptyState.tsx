@@ -11,6 +11,7 @@ interface EmptyStateProps {
   icon?: string;
   actionLabel?: string;
   onAction?: () => void;
+  actionDisabled?: boolean;
 }
 
 export default function EmptyState({
@@ -19,6 +20,7 @@ export default function EmptyState({
   icon,
   actionLabel,
   onAction,
+  actionDisabled = false,
 }: EmptyStateProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -29,7 +31,12 @@ export default function EmptyState({
       <Text style={styles.title}>{title}</Text>
       {description ? <Text style={styles.description}>{description}</Text> : null}
       {actionLabel && onAction ? (
-        <AppButton title={actionLabel} onPress={onAction} style={styles.action} />
+        <AppButton
+          title={actionLabel}
+          onPress={onAction}
+          disabled={actionDisabled}
+          style={styles.action}
+        />
       ) : null}
     </View>
   );

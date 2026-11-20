@@ -1,19 +1,17 @@
 import React from 'react';
-import { ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import Screen from '../../../src/components/ui/Screen';
+import LoadingState from '../../../src/components/ui/LoadingState';
 import TaskForm from '../../../src/components/task/TaskForm';
 import DraftBanner from '../../../src/components/task/DraftBanner';
 import { getErrorMessage, isUnauthorized } from '../../../src/api/client';
 import { useCreateTask } from '../../../src/features/tasks/useTaskMutations';
 import { useTaskDraft } from '../../../src/hooks/useTaskDraft';
-import { useTheme } from '../../../src/context/ThemeContext';
 import { TaskFormValues } from '../../../src/types/task';
 import { toCreateInput } from '../../../src/utils/task';
 
 export default function NewTaskScreen() {
   const createMutation = useCreateTask();
-  const { colors } = useTheme();
   const draft = useTaskDraft();
 
   const handleSubmit = (values: TaskFormValues) => {
@@ -26,13 +24,7 @@ export default function NewTaskScreen() {
     });
   };
 
-  if (draft.isLoading) {
-    return (
-      <Screen centered>
-        <ActivityIndicator color={colors.primary} />
-      </Screen>
-    );
-  }
+  if (draft.isLoading) return <LoadingState />;
 
   const submitError =
     createMutation.isError && !isUnauthorized(createMutation.error)

@@ -1,4 +1,6 @@
-import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
+import { AppState, AppStateStatus, Platform } from 'react-native';
+import { focusManager, MutationCache, QueryCache, QueryClient } from '@tanstack/react-query';
 import { ApiError, isUnauthorized } from './client';
 
 // Что делать при 401 любого запроса или мутации. Обработчик регистрирует
@@ -40,3 +42,17 @@ export const queryClient = new QueryClient({
     },
   },
 });
+
+// В React Native нет события «вкладка снова активна», как в браузере.
+// Сообщаем TanStack Query, что приложение вернулось из фона: устаревшие
+// запросы на экране обновятся сами (например, задачи изменили на другом устройстве)
+function onAppStateChange(status: AppStateStatus) {
+  if (Platform.OS !== 'web') focusManager.setFocused(status === 'active');
+}
+
+export function useRefetchOnAppFocus(): void {
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', onAppStateChange);
+    return () => subscription.remove();
+  }, []);
+}

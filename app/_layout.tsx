@@ -4,7 +4,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { queryClient } from '../src/api/queryClient';
+import { queryClient, useRefetchOnAppFocus } from '../src/api/queryClient';
 import { ThemeProvider, useTheme } from '../src/context/ThemeContext';
 import { LOADING_COLORS } from '../src/theme/colors';
 import { AuthProvider } from '../src/auth/AuthContext';
@@ -46,6 +46,8 @@ function RootStack() {
 }
 
 export default function RootLayout() {
+  useRefetchOnAppFocus();
+
   return (
     // Корневой контейнер жестов: без него GestureDetector внутри экранов не работает
     <GestureHandlerRootView style={styles.root}>

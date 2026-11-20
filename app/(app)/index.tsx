@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import Animated, { LinearTransition } from 'react-native-reanimated';
 import { Stack } from 'expo-router';
 import TaskCard from '../../src/components/task/TaskCard';
@@ -11,6 +11,8 @@ import Screen from '../../src/components/ui/Screen';
 import AppButton from '../../src/components/ui/AppButton';
 import AppInput from '../../src/components/ui/AppInput';
 import EmptyState from '../../src/components/ui/EmptyState';
+import LoadingState from '../../src/components/ui/LoadingState';
+import ErrorState from '../../src/components/ui/ErrorState';
 import { getErrorMessage } from '../../src/api/client';
 import { useTasksQuery } from '../../src/features/tasks/useTasksQuery';
 import { useToggleTaskStatus } from '../../src/features/tasks/useTaskMutations';
@@ -95,11 +97,10 @@ export default function TaskListScreen() {
   // Первая загрузка
   if (listQuery.isPending) {
     return (
-      <Screen centered>
+      <>
         {header}
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Загрузка задач…</Text>
-      </Screen>
+        <LoadingState label="Загрузка задач…" />
+      </>
     );
   }
 
@@ -107,16 +108,15 @@ export default function TaskListScreen() {
   // при 401 сессию завершает QueryCache, остальные ошибки только показываются
   if (listQuery.isError && !listQuery.data) {
     return (
-      <Screen>
+      <>
         {header}
-        <EmptyState
-          icon="⚠️"
+        <ErrorState
           title="Не удалось загрузить задачи"
-          description={getErrorMessage(listQuery.error)}
-          actionLabel={listQuery.isFetching ? 'Загрузка…' : 'Повторить'}
-          onAction={() => void refetchList()}
+          error={listQuery.error}
+          onRetry={() => void refetchList()}
+          isRetrying={listQuery.isFetching}
         />
-      </Screen>
+      </>
     );
   }
 
@@ -228,11 +228,6 @@ const createStyles = (colors: ThemeColors) =>
       color: colors.primary,
       fontSize: fontSize.md,
       fontWeight: '600',
-    },
-    loadingText: {
-      marginTop: spacing.sm,
-      fontSize: fontSize.sm,
-      color: colors.textSecondary,
     },
     header: {
       paddingHorizontal: spacing.md,
